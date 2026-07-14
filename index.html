@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>타래 저장소</title>
+<style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --bg: #f8f7f4;
+        --surface: #ffffff;
+        --surface2: #f2f0ec;
+        --border: rgba(0, 0, 0, 0.10);
+        --border2: rgba(0, 0, 0, 0.18);
+        --text: #1a1916;
+        --text2: #6b6860;
+        --text3: #a09e99;
+        --primary: #5E7C8A;
+        --primary-soft: #E9EEF0;
+        --radius-md: 10px;
+        --radius-lg: 18px;
+        --shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+
+    body {
+        font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* 상단 사이트 이동 바 */
+    .top-nav {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 20px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+    }
+    .top-nav-brand { font-size: 13.5px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; }
+    .top-nav-right { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .nav-btn {
+        font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: var(--radius-md);
+        border: 1px solid var(--border2); color: var(--text2); background: var(--surface);
+        text-decoration: none; transition: background 0.15s, color 0.15s;
+    }
+    .nav-btn:hover { background: var(--surface2); color: var(--text); }
+    .nav-btn.current { background: var(--primary-soft); color: var(--primary); border-color: var(--primary-soft); cursor: default; }
+
+    .page { width: 100%; max-width: 780px; padding: 60px 20px; }
+
+    /* 헤더 */
+    header { text-align: center; margin-bottom: 34px; }
+    .brand-icon { font-size: 34px; display: block; margin-bottom: 14px; }
+    h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.3px; line-height: 1.4; margin-bottom: 10px; }
+    header p.sub { font-size: 13.5px; color: var(--text2); }
+
+    /* 설명 카드 */
+    .lead-card {
+        background: var(--primary-soft);
+        border: 1px solid #d3dee2;
+        border-radius: var(--radius-md);
+        padding: 20px 24px;
+        font-size: 13.5px;
+        line-height: 1.75;
+        color: #3f5964;
+        margin-bottom: 40px;
+    }
+    .lead-card b { color: #2c414a; }
+
+    /* 도구 카드 영역 */
+    .tools-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 46px; }
+
+    .tool-card {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 28px 24px;
+        text-decoration: none;
+        color: var(--text);
+        box-shadow: var(--shadow);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+    .tool-card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.08); border-color: var(--primary); }
+
+    .tool-step { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; color: var(--primary); text-transform: uppercase; margin-bottom: 10px; }
+    .tool-icon { font-size: 26px; margin-bottom: 12px; }
+    .tool-card h2 { font-size: 16.5px; font-weight: 700; margin-bottom: 8px; }
+    .tool-card p { font-size: 12.5px; color: var(--text2); line-height: 1.6; flex: 1; }
+    .tool-cta { margin-top: 16px; font-size: 12.5px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 4px; }
+    .tool-card:hover .tool-cta { gap: 8px; }
+    .tool-cta span.arrow { transition: transform 0.18s ease; }
+    .tool-card:hover .tool-cta span.arrow { transform: translateX(2px); }
+
+    @media (max-width: 760px) {
+        .tools-row { grid-template-columns: 1fr; }
+    }
+
+    /* 업데이트 노트 */
+    .update-notes {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 22px 24px;
+        margin-bottom: 46px;
+    }
+    .update-notes-title { font-size: 13.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .update-list { list-style: none; margin-top: 10px; }
+    .update-list li {
+        display: flex;
+        gap: 14px;
+        padding: 10px 0;
+        border-top: 1px solid var(--border);
+        font-size: 12.5px;
+        line-height: 1.6;
+    }
+    .update-list li:first-child { border-top: none; padding-top: 4px; }
+    .update-date { flex-shrink: 0; width: 78px; color: var(--text3); font-weight: 600; white-space: nowrap; }
+    .update-desc { color: var(--text2); }
+
+    /* 푸터 */
+    footer {
+        border-top: 1px solid var(--border);
+        padding-top: 22px;
+        text-align: center;
+    }
+    footer .credit { font-size: 12px; color: var(--text3); line-height: 1.8; }
+    footer .credit b { color: var(--text2); font-weight: 600; }
+    footer .links { margin-top: 14px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .foot-btn {
+        font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: var(--radius-md);
+        border: 1px solid var(--border2); color: var(--text2); background: var(--surface);
+        text-decoration: none; transition: background 0.15s, color 0.15s;
+    }
+    .foot-btn:hover { background: var(--surface2); color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- 0) 상단 사이트 이동 바 -->
+<div class="top-nav">
+    <div class="top-nav-brand">🧵 타래 저장소</div>
+    <div class="top-nav-right">
+        <span class="nav-btn current">메인 페이지</span>
+        <a class="nav-btn" href="extractor.html">타래 뽑기</a>
+        <a class="nav-btn" href="maker.html">타래 엮기</a>
+    </div>
+</div>
+
+<div class="page">
+
+    <header>
+        <span class="brand-icon">🧵</span>
+        <h1>타래 저장소</h1>
+        <p class="sub">흘러가기 쉬운 대화를 타래(CSV)로 감아두는 두 가지 도구</p>
+    </header>
+
+    <div class="lead-card">
+        <b>트위터(X), 마스토돈, 디스코드, 카카오톡</b>에서 나눈 다채롭고 소중한 이야기를 언제든 다시 펼쳐볼 수 있도록<b>타래(CSV)</b>로 뽑아 저장하고, 필요할 때 다시 열어 <b>HTML이나 캡쳐 이미지</b>로 엮어주기 위한 사이트 타래 저장소입니다.<br>
+        올린 내용은 서버로 <b>전혀 전송되지 않으며</b>, 모든 가공과 처리는 <b>이 브라우저 안에서만</b> 이루어집니다. 추후 좀 더 편리한 가공을 위한 유료 툴킷을 배포할 예정이 있지만 기본적인 타래 뽑기와 타래 엮기 사이트는 <b>무료 배포</b>로 유지됩니다.
+    </div>
+
+    <div class="tools-row">
+        <a class="tool-card" href="extractor.html">
+            <div class="tool-step">Step 1</div>
+            <div class="tool-icon">📤</div>
+            <h2>타래 뽑기</h2>
+            <p>트위터·마스토돈·카카오톡·디스코드에서 대화를 추출해 백업용 타래(CSV) 파일로 저장해요.</p>
+            <div class="tool-cta">뽑으러 가기 <span class="arrow">→</span></div>
+        </a>
+
+        <a class="tool-card" href="maker.html">
+            <div class="tool-step">Step 2</div>
+            <div class="tool-icon">📖</div>
+            <h2>타래 엮기</h2>
+            <p>저장했던 타래(CSV) 파일을 불러와 채팅 형태로 예쁘게 펼치고, 웹 문서(HTML)나 이미지로 다시 보관해요.</p>
+            <div class="tool-cta">엮으러 가기 <span class="arrow">→</span></div>
+        </a>
+    </div>
+
+    <!-- 업데이트 노트: 새 항목이 생기면 update-list 맨 위에 <li> 하나씩 추가해주세요 -->
+    <div class="update-notes">
+        <div class="update-notes-title">📌 업데이트 계획</div>
+        <ul class="update-list">
+            <li>
+                <span class="update-date">2026.07.15</span>
+                <span class="update-desc">타래 툴킷 오픈 준비 중 (타래 엮기 커스텀ver, 타래 디바이더/바인더 등)</span>
+            </li>
+            <li>
+                <span class="update-date">2026.07.15</span>
+                <span class="update-desc">타래 저장소를 오픈했어요. 타래 뽑기와 타래 엮기를 바로 사이트에서 이용할 수 있어요. </span>
+            </li>
+        </ul>
+    </div>
+
+    <footer>
+        <div class="credit">
+            제작 <b>미라도</b> · Gemini, Claude의 도움을 받아 제작된 바이브 코딩 프로젝트입니다.
+        </div>
+        <div class="links">
+            <a class="foot-btn" href="https://x.com/m1r4d0r_" target="_blank">🐦 제작자 X (@m1r4d0r_)</a>
+            <a class="foot-btn" href="https://forms.gle/ZSs7spGPfNb4RAZR9" target="_blank" rel="noopener">🐞 버그 제보 (Google Form)</a>
+        </div>
+    </footer>
+
+</div>
+</body>
+</html>

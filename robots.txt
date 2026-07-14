@@ -1,0 +1,76 @@
+# 타래 저장소 — 개인 대화/롤플레이 로그를 다루는 개인 도구 사이트라
+# 학습이든 실시간 검색 인용이든 AI가 콘텐츠를 가져가는 걸 원치 않아 전부 차단합니다.
+# 참고: robots.txt는 "부탁"일 뿐 강제력은 없어요. 지키지 않는 봇도 있습니다
+# (아래 메타 태그 및 체크리스트 참고).
+
+# OpenAI
+User-agent: GPTBot
+Disallow: /
+User-agent: ChatGPT-User
+Disallow: /
+User-agent: OAI-SearchBot
+Disallow: /
+
+# Anthropic
+User-agent: ClaudeBot
+Disallow: /
+User-agent: Claude-Web
+Disallow: /
+User-agent: Claude-User
+Disallow: /
+User-agent: Claude-SearchBot
+Disallow: /
+User-agent: anthropic-ai
+Disallow: /
+
+# Google (검색 색인과는 별개 — Googlebot 자체는 막지 않음)
+User-agent: Google-Extended
+Disallow: /
+
+# Meta / Facebook
+User-agent: FacebookBot
+Disallow: /
+User-agent: Meta-ExternalAgent
+Disallow: /
+User-agent: Meta-ExternalFetcher
+Disallow: /
+
+# Common Crawl (여러 오픈소스 LLM 학습 데이터의 원천)
+User-agent: CCBot
+Disallow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Disallow: /
+User-agent: Perplexity-User
+Disallow: /
+
+# 기타 알려진 수집 봇
+User-agent: Bytespider
+Disallow: /
+User-agent: cohere-ai
+Disallow: /
+User-agent: Diffbot
+Disallow: /
+User-agent: Omgili
+Disallow: /
+User-agent: Omgilibot
+Disallow: /
+User-agent: Applebot-Extended
+Disallow: /
+User-agent: YouBot
+Disallow: /
+User-agent: Amazonbot
+Disallow: /
+User-agent: ImagesiftBot
+Disallow: /
+User-agent: Timpibot
+Disallow: /
+User-agent: img2dataset
+Disallow: /
+
+# 나머지 전부 (일반 검색엔진은 허용 — Google/Naver/Bing 색인은 필요하시면 유지)
+User-agent: *
+Allow: /
+
+Sitemap: https://tarae-archiving.netlify.app/sitemap.xml

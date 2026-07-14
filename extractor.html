@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>타래 뽑기</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        :root {
+            --bg: #f8f7f4;
+            --surface: #ffffff;
+            --surface2: #f2f0ec;
+            --border: rgba(0, 0, 0, 0.10);
+            --border2: rgba(0, 0, 0, 0.18);
+            --text: #1a1916;
+            --text2: #6b6860;
+            --text3: #a09e99;
+            --primary: #5E7C8A;
+            --primary-soft: #E9EEF0;
+            --radius-md: 10px;
+            --info-bg: #EDF1F3;
+            --info-border: #d1dde1;
+            --info-text-strong: #3f5964;
+            --info-text: #46606b;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 0 0 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 상단 사이트 이동 바 */
+        .top-nav {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+        .top-nav-brand { font-size: 13.5px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; }
+        .top-nav-right { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .nav-btn {
+            font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: var(--radius-md);
+            border: 1px solid var(--border2); color: var(--text2); background: var(--surface);
+            text-decoration: none; transition: background 0.15s, color 0.15s;
+        }
+        .nav-btn:hover { background: var(--surface2); color: var(--text); }
+        .nav-btn.current { background: var(--primary-soft); color: var(--primary); border-color: var(--primary-soft); cursor: default; }
+
+        .container {
+            width: calc(100% - 40px);
+            max-width: 850px;
+            background: var(--surface);
+            padding: 30px;
+            border-radius: var(--radius-md);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        h2 { font-size: 20px; margin-bottom: 5px; text-align: center; font-weight: 700; }
+        .version-date { font-size: 12px; color: var(--text2); text-align: center; margin-bottom: 25px; }
+
+        /* 안내 및 주의사항 상자 구역 */
+        .info-card {
+            background: var(--info-bg);
+            border: 1px solid var(--info-border);
+            padding: 18px 20px;
+            border-radius: var(--radius-md);
+            margin-bottom: 25px;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+        .info-card h3 { font-size: 14px; font-weight: 700; color: var(--info-text-strong); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .info-card ul { padding-left: 20px; color: var(--info-text); }
+        .info-card li { margin-bottom: 4px; }
+        .info-card a { color: var(--primary); font-weight: 600; text-decoration: none; }
+        .info-card a:hover { color: var(--info-text-strong); }
+
+        .control-group { margin-bottom: 20px; }
+        .control-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 8px; }
+
+        /* 토글 버튼 디자인 */
+        .btn-group { display: flex; gap: 4px; background: var(--surface2); padding: 4px; border-radius: var(--radius-md); margin-bottom: 15px; }
+        .toggle-btn { flex: 1; font-size: 13px; font-weight: 600; padding: 10px; border-radius: 7px; border: none; background: transparent; color: var(--text2); cursor: pointer; transition: all 0.15s; }
+        .toggle-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+
+        .file-label { display: block; text-align: center; padding: 25px; background: var(--surface2); border: 2px dashed var(--border2); border-radius: var(--radius-md); cursor: pointer; font-size: 14px; font-weight: 600; }
+        input[type="file"] { display: none; }
+
+        /* 디스코드 전용 텍스트 에어리어 스타일 */
+        .discord-textarea {
+            width: 100%;
+            height: 180px;
+            padding: 15px;
+            font-size: 13.5px;
+            border: 2px dashed var(--border2);
+            border-radius: var(--radius-md);
+            background: var(--surface2);
+            color: var(--text);
+            resize: vertical;
+            outline: none;
+            font-family: inherit;
+        }
+        .discord-textarea:focus { border-color: var(--primary); background: var(--surface); }
+
+        /* 프리뷰 테이블 */
+        .preview-box { margin-top: 25px; display: none; }
+        .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; margin-top: 10px; max-height: 400px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; table-layout: fixed; }
+        th, td { padding: 12px; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        th { background: var(--surface2); color: var(--text2); font-weight: 600; position: sticky; top: 0; }
+        td.content-cell { white-space: pre-wrap; word-break: break-all; }
+        td.pfp-cell a { color: var(--primary); font-weight: 600; text-decoration: none; }
+        td.pfp-cell a:hover { text-decoration: underline; }
+        td.pfp-cell .pfp-empty { color: var(--text3); }
+
+        .action-btn { display: block; width: 100%; font-size: 14px; font-weight: 600; padding: 12px; border-radius: var(--radius-md); border: none; background: var(--primary); color: white; cursor: pointer; text-align: center; margin-top: 20px; transition: opacity 0.15s; }
+        .action-btn:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+
+    <!-- 0) 상단 사이트 이동 바 -->
+    <div class="top-nav">
+        <div class="top-nav-brand">🧵 타래 저장소</div>
+        <div class="top-nav-right">
+            <a class="nav-btn" href="index.html">메인 페이지</a>
+            <span class="nav-btn current">타래 뽑기</span>
+            <a class="nav-btn" href="maker.html">타래 엮기</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>타래 뽑기</h2>
+
+        <!-- 사용 방법 및 주의사항 상자 -->
+        <div class="info-card">
+            <h3>💡 사용 방법</h3>
+            <ul>
+                <li><b>마스토돈 / 트위터</b>: 대화 타래 페이지에서 <b>[우클릭] → [다른 이름으로 저장]</b> (파일 형식: <b>웹페이지, 전부</b>)으로 내려받은 HTML 파일을 업로드하세요.</li>
+                <li><b>카카오톡</b>: <b>[메뉴] → [설정] → [대화 내용 내보내기] → [텍스트 메시지만 저장]</b> (모바일) / <b>[메뉴] → [대화 내용] → [대화 저장하기]</b> (PC) 로 저장한 TXT 파일을 업로드하세요.</li>
+                <li><b>디스코드</b>: 대화 내용을 드래그로 복사(Ctrl+C)해서 아래 텍스트 창에 붙여넣기(Ctrl+V) 하세요.</li>
+            </ul>
+
+            <h3 style="margin-top: 16px;">⚠️ 주의 사항</h3>
+            <ul>
+                <li>마스토돈·트위터는 사이트 구조가 바뀌면 추출이 실패할 수 있어요. 정상 작동하지 않으면 <a href="index.html">메인 페이지</a>의 문의 방법으로 알려주세요.</li>
+                <li>마스토돈·트위터는 HTML 저장 시 <b>웹페이지, 전부</b>가 아니라 다른 형식으로 저장하면 작동하지 않습니다.</li>
+                <li>트위터는 플랫폼 특성상 긴 대화의 경우 한번에 전부 저장되지 않을 수 있습니다.</li>
+                <li>카카오톡, 디스코드는 아이디를 임의 생성하고 프로필 이미지는 수집되지 않습니다. 뷰어에서 별도로 수정해주세요.</li>
+            </ul>
+        </div>
+
+        <!-- 1. 플랫폼 선택 파트 -->
+        <div class="control-group">
+            <label>1. 추출할 소스 원본 플랫폼 유형 선택</label>
+            <div class="btn-group" id="platformGroup">
+                <button class="toggle-btn active" data-val="mastodon">마스토돈 (Mastodon)</button>
+                <button class="toggle-btn" data-val="twitter">트위터 (X)</button>
+                <button class="toggle-btn" data-val="kakao">카카오톡 (.txt)</button>
+                <button class="toggle-btn" data-val="discord">디스코드 (텍스트 복사)</button>
+            </div>
+        </div>
+
+        <!-- 2. 입력 방식 제어 분기 -->
+        <div class="control-group" id="fileInputSection">
+            <label>2. 파일 업로드</label>
+            <label class="file-label" for="htmlFile" id="uploadLabel">📁 다른 이름으로 저장한 HTML 파일 선택</label>
+            <input type="file" id="htmlFile" accept=".html,.htm">
+        </div>
+
+        <div class="control-group" id="discordInputSection" style="display: none;">
+            <label>2. 디스코드 대화 내용 붙여넣기</label>
+            <textarea class="discord-textarea" id="discordText" placeholder="디스코드 앱에서 전체 드래그 복사(Ctrl+C)한 내용을 여기에 그대로 붙여넣으세요 (Ctrl+V)."></textarea>
+        </div>
+
+        <!-- 3. 결과 테이블 프리뷰 검증 파트 -->
+        <div class="preview-box" id="previewBox">
+            <label>3. 추출 결과 검증 미리보기 (<span id="countRow">0</span>건 추출됨)</label>
+
+            <!-- 마스토돈 전용: 답멘("@아이디 ...")을 대사 맨 앞에서 표시할지 지울지 미리보기에서
+                 바로 확인해보고 정할 수 있는 스위치. "지우기" 상태로 CSV 저장하면 그 부분이
+                 실제로 삭제된 채로 저장된다(뷰어에서는 되돌릴 수 없으니 신중하게 선택). -->
+            <div class="control-group" id="mastodonMentionSection" style="display:none; margin-top:12px; margin-bottom:0;">
+                <label>답멘 아이디 표시 여부 (마스토돈 전용)</label>
+                <div class="btn-group" id="mastodonMentionGroup" style="margin-bottom:10px;">
+                    <button class="toggle-btn active" data-val="show">표시하기</button>
+                    <button class="toggle-btn" data-val="hide">지우기</button>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="previewTable">
+                    <colgroup>
+                        <col style="width: 12%;">
+                        <col style="width: 12%;">
+                        <col style="width: 16%;">
+                        <col style="width: 40%;">
+                        <col style="width: 20%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>이름</th>
+                            <th>아이디</th>
+                            <th>타임스탬프</th>
+                            <th>대사 본문</th>
+                            <th>프로필 이미지</th>
+                        </tr>
+                    </thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+            </div>
+            <button class="action-btn" id="btnDownloadCsv">📥 백업용 타래(CSV) 파일 저장하기</button>
+        </div>
+    </div>
+
+    <script>
+        let extractedRows = [];
+
+        const htmlFileInput = document.getElementById('htmlFile');
+        const discordTextArea = document.getElementById('discordText');
+        const fileInputSection = document.getElementById('fileInputSection');
+        const discordInputSection = document.getElementById('discordInputSection');
+        const uploadLabel = document.getElementById('uploadLabel');
+        const previewBox = document.getElementById('previewBox');
+
+        // 상단 플랫폼 선택 토글 시스템
+        document.getElementById('platformGroup').addEventListener('click', e => {
+            const btn = e.target.closest('.toggle-btn');
+            if (!btn) return;
+            document.querySelectorAll('#platformGroup .toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            extractedRows = [];
+            htmlFileInput.value = "";
+            discordTextArea.value = "";
+            previewBox.style.display = "none";
+
+            // 답멘 아이디 스위치는 마스토돈일 때만 노출하고, 플랫폼을 바꿀 때마다 기본값(표시하기)으로 되돌린다
+            const mastodonMentionSection = document.getElementById('mastodonMentionSection');
+            mastodonMentionSection.style.display = (btn.dataset.val === 'mastodon') ? 'block' : 'none';
+            document.querySelectorAll('#mastodonMentionGroup .toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.val === 'show'));
+
+            if (btn.dataset.val === 'discord') {
+                fileInputSection.style.display = "none";
+                discordInputSection.style.display = "block";
+            } else if (btn.dataset.val === 'kakao') {
+                fileInputSection.style.display = "block";
+                discordInputSection.style.display = "none";
+                htmlFileInput.accept = ".txt";
+                uploadLabel.innerText = "📁 카카오톡 대화 내보내기(.txt) 파일 선택";
+            } else {
+                fileInputSection.style.display = "block";
+                discordInputSection.style.display = "none";
+                htmlFileInput.accept = ".html,.htm";
+                uploadLabel.innerText = "📁 다른 이름으로 저장한 HTML 파일 선택";
+            }
+        });
+
+        // 답멘 아이디 표시/숨기기 스위치: 원본 데이터(extractedRows)는 그대로 두고 미리보기만 다시 그린다
+        document.getElementById('mastodonMentionGroup').addEventListener('click', e => {
+            const btn = e.target.closest('.toggle-btn');
+            if (!btn) return;
+            document.querySelectorAll('#mastodonMentionGroup .toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderPreview();
+        });
+
+        // 페이지가 처음 열렸을 때도(기본값이 마스토돈이라 클릭 이벤트 없이 이미 활성 상태) 노출 여부를 맞춰준다
+        document.getElementById('mastodonMentionSection').style.display =
+            (document.querySelector('#platformGroup .active').dataset.val === 'mastodon') ? 'block' : 'none';
+
+        // 대사 맨 앞의 "@아이디 " 답멘 접두어(여러 개 연속일 수도 있음)를 찾아 제거한 문자열을 반환
+        function stripMentionPrefix(content) {
+            const m = content.match(/^(@[A-Za-z0-9_]+\s+)+/);
+            return m ? content.slice(m[0].length) : content;
+        }
+
+        // 파일 선택 이벤트 감지
+        htmlFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            uploadLabel.innerText = `📄 ${file.name}`;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const currentPlatform = document.querySelector('#platformGroup .active').dataset.val;
+                if (currentPlatform === 'kakao') {
+                    parseKakaoText(evt.target.result);
+                } else {
+                    parseHtmlToData(evt.target.result, currentPlatform);
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        });
+
+        // 디스코드 실시간 텍스트 입력 감지
+        discordTextArea.addEventListener('input', function() {
+            parseDiscordText(this.value);
+        });
+
+        // Imgur 링크 필터 세탁 치트키 유틸
+        function normalizeImgUrl(url) {
+            if (!url) return "";
+            try {
+                const u = new URL(url);
+                if (u.hostname === 'imgur.com') {
+                    let path = u.pathname.replace(/^\/+/, '');
+                    if (!path || path.startsWith('a/') || path.startsWith('gallery/')) return url;
+                    if (!/\.\w{3,4}$/.test(path)) path += '.png';
+                    return `https://i.imgur.com/${path}`;
+                }
+            } catch (e) {}
+            return url;
+        }
+
+        // 카카오톡 "대화 내보내기" .txt 파싱
+        // 형식: "2026년 7월 12일 오후 1:40, 이름 : 내용" 한 줄에 메시지 하나가 기본이지만,
+        // 메시지 안에서 실제로 엔터(줄바꿈)를 친 경우엔 다음 줄부터 저 헤더 패턴 없이 내용만 이어져
+        // 나오므로, 헤더 패턴에 안 맞는 줄은 전부 "진행 중인 메시지의 이어지는 내용"으로 취급해서
+        // 엔터를 보존한다. 날짜 구분선이나 입장/퇴장 같은 시스템 알림은 별도로 걸러낸다.
+        function parseKakaoText(text) {
+            const rawLines = text.split(/\r\n|\r|\n/);
+
+            // 모바일 내보내기 형식: "2026년 7월 12일 오후 1:40, 이름 : 내용" (날짜+시간이 매 메시지에 다 붙음)
+            const mobileHeaderRegex = /^(\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*(?:오전|오후)\s*\d{1,2}:\d{2}),\s*([^:]+?)\s*:\s*(.*)$/;
+            // PC 내보내기 형식: "[이름] [오전 6:58] 내용" (시간만 있고 날짜는 별도의 구분선 줄에만 있음)
+            const pcHeaderRegex = /^\[([^\]]+)\]\s*\[((?:오전|오후)\s*\d{1,2}:\d{2})\]\s*(.*)$/;
+            const systemRegex = /님이 (들어왔습니다|나갔습니다)\.?\s*$/;
+            const titleOrSavedRegex = /님과 카카오톡 대화\s*$|^저장한 날짜\s*[:：]/;
+
+            // 날짜 구분선(모바일/PC 두 형식 다 지원) — 줄 전체가 "날짜"로만 이루어진 경우에만 구분선으로
+            // 인정해서, 실제 대사 내용 중에 우연히 날짜스러운 문구가 있어도 오인하지 않게 한다.
+            function tryExtractDividerDate(trimmed) {
+                const patterns = [
+                    /^-{3,}\s*(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일[^-]*-{3,}$/,          // PC: --------------- 2026년 6월 16일 화요일 ---------------
+                    /^(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*(?:오전|오후)\s*\d{1,2}:\d{2}\s*$/, // 모바일: 2026년 7월 12일 오후 1:40 (단독 구분선 아티팩트)
+                    /^(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*[가-힣]*요일?\s*$/,          // 2026년 7월 12일 (화요일)
+                ];
+                for (const re of patterns) {
+                    const m = trimmed.match(re);
+                    if (m) return `${m[1]}. ${m[2]}. ${m[3]}`;
+                }
+                return null;
+            }
+
+            let current = null; // { name, time, contentLines }
+            let currentDate = ''; // PC 형식은 메시지 줄에 날짜가 없어서, 구분선에서 본 날짜를 기억해뒀다가 붙인다
+            const rawRows = [];
+
+            function flush() {
+                if (current) {
+                    const content = current.contentLines.join('\n').trim();
+                    if (content !== '') {
+                        rawRows.push({ name: current.name, id: "id_" + current.name, time: current.time, content, pfp: "" });
+                    }
+                }
+                current = null;
+            }
+
+            rawLines.forEach(rawLine => {
+                const line = rawLine.replace(/\r$/, '');
+                const trimmed = line.trim();
+
+                // PC 형식 먼저 시도
+                let m = line.match(pcHeaderRegex);
+                if (m) {
+                    flush();
+                    const timeOnly = m[2].trim();
+                    current = { name: m[1].trim(), time: currentDate ? `${currentDate} ${timeOnly}` : timeOnly, contentLines: [m[3]] };
+                    return;
+                }
+
+                // 모바일 형식 시도
+                m = line.match(mobileHeaderRegex);
+                if (m) {
+                    flush();
+                    const dm = m[1].match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*((?:오전|오후)\s*\d{1,2}:\d{2})/);
+                    current = { name: m[2].trim(), time: dm ? `${dm[1]}. ${dm[2]}. ${dm[3]} ${dm[4]}` : m[1], contentLines: [m[3]] };
+                    return;
+                }
+
+                // 입장/퇴장 알림, 제목/저장정보 줄은 버림
+                if (systemRegex.test(trimmed) || titleOrSavedRegex.test(trimmed)) return;
+
+                // 날짜 구분선이면 날짜만 기억해두고 버림 (실제 대사 줄이 아님)
+                const dividerDate = tryExtractDividerDate(trimmed);
+                if (dividerDate) { currentDate = dividerDate; return; }
+
+                // 그 외는 진행 중인 메시지의 이어지는 줄(엔터로 이어진 내용)로 취급
+                if (current) current.contentLines.push(line);
+            });
+            flush();
+
+            // "엔터 보호": 같은 사람이 연달아 보낸 메시지는 한 행으로 합치고 줄바꿈으로 이어붙인다.
+            // 이러면 카톡 테마에서는 연달아 붙는 말풍선으로, 다른 레이아웃에서는 한 메시지 안의
+            // 줄바꿈으로 보인다. 시간은 합쳐진 메시지들 중 제일 마지막(최하단) 것으로 남긴다.
+            // 단, 날짜가 다르면(중간에 날짜 구분선을 건너뛰었어도) 절대 합치지 않는다 — 그렇지 않으면
+            // 예를 들어 6/16의 마지막 메시지와 6/30의 첫 메시지가 같은 사람이라는 이유로 합쳐져서
+            // 타임스탬프가 뒤죽박죽이 되어버린다.
+            function getDatePart(timeStr) {
+                const m = timeStr.match(/^(\d{4}\.\s*\d{1,2}\.\s*\d{1,2})/);
+                return m ? m[1] : timeStr;
+            }
+            extractedRows = [];
+            rawRows.forEach(row => {
+                const last = extractedRows[extractedRows.length - 1];
+                if (last && last.name === row.name && getDatePart(last.time) === getDatePart(row.time)) {
+                    last.content = last.content + '\n' + row.content;
+                    last.time = row.time;
+                } else {
+                    extractedRows.push({ ...row });
+                }
+            });
+
+            renderPreview();
+        }
+
+        // 디스코드 줄바꿈(엔터) 보존 파싱 엔진 (🛠️ 에러 유발 가능성 정규식 전면 배제 및 안전화 수리)
+        function parseDiscordText(text) {
+            extractedRows = [];
+            const lines = text.split('\n').map(line => line.trim());
+            
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].includes('—')) {
+                    const namePart = lines[i].split('—')[0].trim();
+                    if (!namePart) continue;
+
+                    let name = namePart;
+                    let timeStr = "";
+                    let contentLines = [];
+
+                    // 분기 1: 바로 다음 줄에 날짜가 따로 나오는 형태 (날짜 시작 문자 검증)
+                    if (i + 1 < lines.length && lines[i+1].startsWith('20')) {
+                        const rawTime = lines[i+1];
+                        timeStr = rawTime.replace(/-/g, '. ');
+                        
+                        let j = i + 2;
+                        while (j < lines.length && !lines[j].includes('—')) {
+                            contentLines.push(lines[j]);
+                            j++;
+                        }
+                        i = j - 1; 
+                    } 
+                    // 분기 2: 한 줄에 이름과 날짜가 동시에 붙어있는 복사 형태
+                    else {
+                        const rightPart = lines[i].split('—')[1].trim();
+                        // 텍스트 기반 안전 필터로 날짜 문자열 분리 추출
+                        if (rightPart.includes('20')) {
+                            const idx = rightPart.indexOf('20');
+                            timeStr = rightPart.substring(idx).replace(/-/g, '. ');
+                        }
+                        
+                        let j = i + 1;
+                        while (j < lines.length && !lines[j].includes('—')) {
+                            contentLines.push(lines[j]);
+                            j++;
+                        }
+                        i = j - 1;
+                    }
+
+                    const content = contentLines.join('\n').trim();
+                    const id = "id_" + name; 
+
+                    if (name && content) {
+                        extractedRows.push({ name, id, time: timeStr, content, pfp: "" });
+                    }
+                }
+            }
+            renderPreview();
+        }
+
+        // HTML 웹문서 파서 (마스토돈 / 트위터)
+        // innerText는 실제 화면에 렌더링된(레이아웃이 계산된) 요소에서만 줄바꿈을 제대로 인식한다.
+        // 그런데 이 파서는 DOMParser로 만든, 화면에 붙지 않은 "떠 있는" 문서를 다루기 때문에
+        // innerText로는 <br>이나 문단(<p>) 구분이 전부 사라지고 텍스트가 다 붙어버린다.
+        // 그래서 <br>은 직접 개행문자로 바꾸고, 여러 개의 <p>는 개행으로 이어붙인 뒤
+        // 레이아웃과 무관한 textContent로 읽어서 줄바꿈을 안전하게 보존한다.
+        function extractTextPreservingBreaks(containerEl) {
+            if (!containerEl) return '';
+            const clone = containerEl.cloneNode(true);
+            clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+            const paragraphs = Array.from(clone.querySelectorAll('p'));
+            if (paragraphs.length > 0) {
+                return paragraphs.map(p => p.textContent).join('\n').trim();
+            }
+            return clone.textContent.trim();
+        }
+
+        function parseHtmlToData(htmlText, platform) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlText, 'text/html');
+            extractedRows = [];
+
+            if (platform === 'mastodon') {
+                // "웹페이지, 완전히" 로 저장하면 <img src>가 로컬 파일 경로로 바뀌어버려서
+                // 원본 프로필 이미지 URL을 잃어버림. 대신 마스토돈이 페이지에 심어두는
+                // <script id="initial-state" type="application/json"> 안에는 계정별 원본
+                // avatar URL이 그대로 남아있으므로, 여기서 username -> avatar URL 맵을 만들어
+                // 우선적으로 사용한다.
+                const avatarMap = {};
+                let mediaHost = '';
+                const stateScript = doc.querySelector('script#initial-state[type="application/json"]');
+                if (stateScript) {
+                    try {
+                        const stateData = JSON.parse(stateScript.textContent);
+                        const accounts = stateData.accounts || {};
+                        Object.keys(accounts).forEach(key => {
+                            const acc = accounts[key];
+                            if (acc && acc.username && acc.avatar) {
+                                avatarMap[acc.username] = acc.avatar;
+                                if (!mediaHost) {
+                                    try { mediaHost = new URL(acc.avatar).origin; } catch (e2) {}
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.warn('마스토돈 initial-state JSON 파싱 실패:', e);
+                    }
+                }
+                // initial-state에 계정이 하나도 없으면 canonical 링크의 도메인으로 미디어 호스트를 추정
+                if (!mediaHost) {
+                    const canonical = doc.querySelector('link[rel="canonical"]');
+                    if (canonical) {
+                        try {
+                            const u = new URL(canonical.getAttribute('href'));
+                            mediaHost = 'https://files.' + u.hostname;
+                        } catch (e3) {}
+                    }
+                }
+
+                // initial-state JSON에는 로그인 계정 등 일부 계정만 들어있어서, 대화 상대(다른 계정)는
+                // 여기 없는 경우가 많다. 이런 계정은 img src가 로컬 파일 경로로 바뀌어도 파일명(해시)은
+                // 그대로 보존되므로, 계정 ID(data-hover-card-account)를 3자리씩 묶는 마스토돈의 저장 경로
+                // 규칙으로 역산해서 원본 URL을 복원한다.
+                function buildAvatarUrlFromId(accountId, filename) {
+                    if (!accountId || !filename || !mediaHost) return '';
+                    const idStr = String(accountId);
+                    const targetLen = Math.max(9, Math.ceil(idStr.length / 3) * 3);
+                    const padded = idStr.padStart(targetLen, '0');
+                    const groups = [];
+                    for (let i = 0; i < padded.length; i += 3) groups.push(padded.slice(i, i + 3));
+                    return `${mediaHost}/accounts/avatars/${groups.join('/')}/original/${filename}`;
+                }
+
+                const statusElements = doc.querySelectorAll('.status__wrapper, .detailed-status__wrapper');
+                statusElements.forEach(el => {
+                    let name = "", id = "", timeStr = "", content = "", pfp = "";
+
+                    const nameEl = el.querySelector('.display-name__html, .display-name strong');
+                    if (nameEl) name = nameEl.innerText.trim();
+
+                    const idEl = el.querySelector('.display-name__account');
+                    if (idEl) {
+                        id = idEl.innerText.trim().replace(/^@/, '');
+                        if(id.includes('@')) id = id.split('@')[0];
+                    }
+
+                    const timeEl = el.querySelector('time');
+                    if (timeEl) {
+                        const rawAttr = timeEl.getAttribute('title') || timeEl.innerText;
+                        timeStr = rawAttr.replace(/년\s*/g, '. ').replace(/월\s*/g, '. ').replace(/일/g, '').trim();
+                    }
+
+                    const textEl = el.querySelector('.status__content__text, .status__content');
+                    if (textEl) content = extractTextPreservingBreaks(textEl);
+
+                    const pfpEl = el.querySelector('.status__avatar img, .account__avatar img, .detailed-status__display-avatar img');
+                    const rawSrc = pfpEl ? (pfpEl.getAttribute('src') || "") : "";
+
+                    if (id && avatarMap[id]) {
+                        // 1순위: initial-state JSON에서 찾은 원본 URL
+                        pfp = avatarMap[id];
+                    } else if (/^https?:\/\//.test(rawSrc)) {
+                        // 2순위: img src가 이미 원격 URL이면(로컬 저장이 아니면) 그대로 사용
+                        pfp = rawSrc;
+                    } else {
+                        // 3순위: 로컬 경로로 바뀐 경우, 계정 ID + 파일명으로 원본 URL을 역산
+                        const hoverEl = el.querySelector('[data-hover-card-account]');
+                        const accountId = hoverEl ? hoverEl.getAttribute('data-hover-card-account') : '';
+                        const filename = rawSrc.split('/').pop();
+                        pfp = buildAvatarUrlFromId(accountId, filename) || rawSrc;
+                    }
+
+                    if (name && content) {
+                        extractedRows.push({ name, id, time: timeStr, content, pfp });
+                    }
+                });
+
+            } else if (platform === 'twitter') {
+                const tweets = doc.querySelectorAll('article[data-testid="tweet"]');
+                tweets.forEach(tweet => {
+                    let name = "", id = "", timeStr = "", content = "", pfp = "";
+
+                    const userNameBox = tweet.querySelector('[data-testid="User-Name"]');
+                    if (userNameBox) {
+                        const nameSpan = userNameBox.querySelector('span');
+                        if (nameSpan) name = nameSpan.innerText.trim();
+
+                        const allText = userNameBox.innerText || "";
+                        const idMatch = allText.match(/@([A-Za-z0-9_]+)/);
+                        if (idMatch) id = idMatch[1];
+                    }
+                    if (!id) id = "unknown_user";
+
+                    const timeEl = tweet.querySelector('time');
+                    if (timeEl) {
+                        const isoStr = timeEl.getAttribute('datetime');
+                        if (isoStr) {
+                            const d = new Date(isoStr);
+                            const year = d.getFullYear();
+                            const month = d.getMonth() + 1;
+                            const date = d.getDate();
+                            let hours = d.getHours();
+                            const ampm = hours >= 12 ? '오후' : '오전';
+                            hours = hours % 12;
+                            hours = hours ? hours : 12; 
+                            const minutes = String(d.getMinutes()).padStart(2, '0');
+                            const seconds = String(d.getSeconds()).padStart(2, '0');
+                            
+                            timeStr = `${year}. ${month}. ${date} ${ampm} ${hours}:${minutes}:${seconds}`;
+                        }
+                    }
+
+                    const textContainer = tweet.querySelector('[data-testid="tweetText"]');
+                    if (textContainer) content = extractTextPreservingBreaks(textContainer);
+
+                    // 트위터 HTML을 "완전히" 저장하면 <img src>는 로컬 파일 경로로 바뀌지만,
+                    // 아바타를 감싸는 요소의 style="background-image: url(...)" 안에는
+                    // 원본 pbs.twimg.com 주소가 그대로 남아있으므로 이걸 우선적으로 사용한다.
+                    const avatarBox = tweet.querySelector('[data-testid="Tweet-User-Avatar"]');
+                    let srcAttr = "";
+                    if (avatarBox) {
+                        const bgEl = avatarBox.querySelector('[style*="background-image"]');
+                        if (bgEl) {
+                            const bgMatch = bgEl.getAttribute('style').match(/url\(["']?(.*?)["']?\)/);
+                            if (bgMatch) srcAttr = bgMatch[1];
+                        }
+                        if (!srcAttr) {
+                            const imgEl = avatarBox.querySelector('img') || tweet.querySelector('img[src*="profile_images"]');
+                            if (imgEl) srcAttr = imgEl.getAttribute('src') || "";
+                        }
+                    }
+                    if (srcAttr.includes('_normal.')) {
+                        srcAttr = srcAttr.replace('_normal.', '.');
+                    }
+                    pfp = srcAttr;
+
+                    if (name && content) {
+                        extractedRows.push({ name, id, time: timeStr, content, pfp });
+                    }
+                });
+            }
+
+            renderPreview();
+        }
+
+        // 프리뷰 테이블 렌더러
+        function renderPreview() {
+            const tbody = document.getElementById('previewBody');
+            tbody.innerHTML = "";
+            
+            if(extractedRows.length === 0) {
+                previewBox.style.display = "none";
+                return;
+            }
+
+            const currentPlatform = document.querySelector('#platformGroup .active').dataset.val;
+            const mentionMode = document.querySelector('#mastodonMentionGroup .active')?.dataset.val || 'show';
+            const stripMentions = currentPlatform === 'mastodon' && mentionMode === 'hide';
+
+            extractedRows.forEach(row => {
+                const tr = document.createElement('tr');
+                const pfpUrl = (row.pfp || "").trim();
+                const pfpCell = pfpUrl
+                    ? `<a href="${escapeHtml(pfpUrl)}" target="_blank" rel="noopener noreferrer">🔗 링크 확인</a>`
+                    : `<span class="pfp-empty">없음</span>`;
+                const displayContent = stripMentions ? stripMentionPrefix(row.content) : row.content;
+                tr.innerHTML = `
+                    <td><b>${escapeHtml(row.name)}</b></td>
+                    <td>@${escapeHtml(row.id)}</td>
+                    <td style="color:#6b6860; font-size:12px;">${escapeHtml(row.time)}</td>
+                    <td class="content-cell">${escapeHtml(displayContent)}</td>
+                    <td class="pfp-cell">${pfpCell}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('countRow').innerText = extractedRows.length;
+            previewBox.style.display = "block";
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        // CSV 최종 다운로드 시스템
+        document.getElementById('btnDownloadCsv').addEventListener('click', () => {
+            if (extractedRows.length === 0) return;
+
+            const currentPlatform = document.querySelector('#platformGroup .active').dataset.val;
+            const mentionMode = document.querySelector('#mastodonMentionGroup .active')?.dataset.val || 'show';
+            const stripMentions = currentPlatform === 'mastodon' && mentionMode === 'hide';
+
+            let csvContent = "\uFEFF이름,아이디,타임스탬프,본문,프로필이미지\n";
+
+            extractedRows.forEach(row => {
+                const exportContent = stripMentions ? stripMentionPrefix(row.content) : row.content;
+                const cleanName = `"${row.name.replace(/"/g, '""')}"`;
+                const cleanId = `"${row.id.replace(/"/g, '""')}"`;
+                const cleanTime = `"${row.time.replace(/"/g, '""')}"`;
+                const cleanContent = `"${exportContent.replace(/"/g, '""')}"`;
+                const cleanPfp = `"${normalizeImgUrl(row.pfp || "").replace(/"/g, '""')}"`;
+
+                csvContent += `${cleanName},${cleanId},${cleanTime},${cleanContent},${cleanPfp}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `extracted-sns-log-${Date.now()}.csv`;
+            link.click();
+        });
+    </script>
+</body>
+</html>
