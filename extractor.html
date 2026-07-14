@@ -46,7 +46,8 @@
             border-bottom: 1px solid var(--border);
             margin-bottom: 30px;
         }
-        .top-nav-brand { font-size: 13.5px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; }
+        .top-nav-brand { font-size: 13.5px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; text-decoration: none; }
+        .top-nav-brand:hover { color: var(--primary); }
         .top-nav-right { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
         .nav-btn {
             font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: var(--radius-md);
@@ -130,9 +131,8 @@
 
     <!-- 0) 상단 사이트 이동 바 -->
     <div class="top-nav">
-        <div class="top-nav-brand">🧵 타래 저장소</div>
+        <a class="top-nav-brand" href="index.html">🧵 타래 저장소</a>
         <div class="top-nav-right">
-            <a class="nav-btn" href="index.html">메인 페이지</a>
             <span class="nav-btn current">타래 뽑기</span>
             <a class="nav-btn" href="maker.html">타래 엮기</a>
         </div>
@@ -145,7 +145,7 @@
         <div class="info-card">
             <h3>💡 사용 방법</h3>
             <ul>
-                <li><b>마스토돈 / 트위터</b>: 대화 타래 페이지에서 <b>[우클릭] → [다른 이름으로 저장]</b> (파일 형식: <b>웹페이지, 전부</b>)으로 내려받은 HTML 파일을 업로드하세요.</li>
+                <li><b>마스토돈 / 트위터</b>: 대화 타래 페이지에서 <b>[우클릭] → [다른 이름으로 저장]</b> (파일 형식: <b>웹페이지, 전부</b>)으로 내려받은 HTML 파일을 업로드하세요. (트위터는 스크롤 캡쳐를 이어붙여주는 확장 프로그램의 정리된 HTML 출력도 함께 지원해요.)</li>
                 <li><b>카카오톡</b>: <b>[메뉴] → [설정] → [대화 내용 내보내기] → [텍스트 메시지만 저장]</b> (모바일) / <b>[메뉴] → [대화 내용] → [대화 저장하기]</b> (PC) 로 저장한 TXT 파일을 업로드하세요.</li>
                 <li><b>디스코드</b>: 대화 내용을 드래그로 복사(Ctrl+C)해서 아래 텍스트 창에 붙여넣기(Ctrl+V) 하세요.</li>
             </ul>
@@ -597,67 +597,98 @@
 
             } else if (platform === 'twitter') {
                 const tweets = doc.querySelectorAll('article[data-testid="tweet"]');
-                tweets.forEach(tweet => {
-                    let name = "", id = "", timeStr = "", content = "", pfp = "";
 
-                    const userNameBox = tweet.querySelector('[data-testid="User-Name"]');
-                    if (userNameBox) {
-                        const nameSpan = userNameBox.querySelector('span');
-                        if (nameSpan) name = nameSpan.innerText.trim();
+                if (tweets.length > 0) {
+                    tweets.forEach(tweet => {
+                        let name = "", id = "", timeStr = "", content = "", pfp = "";
 
-                        const allText = userNameBox.innerText || "";
-                        const idMatch = allText.match(/@([A-Za-z0-9_]+)/);
-                        if (idMatch) id = idMatch[1];
-                    }
-                    if (!id) id = "unknown_user";
+                        const userNameBox = tweet.querySelector('[data-testid="User-Name"]');
+                        if (userNameBox) {
+                            const nameSpan = userNameBox.querySelector('span');
+                            if (nameSpan) name = nameSpan.innerText.trim();
 
-                    const timeEl = tweet.querySelector('time');
-                    if (timeEl) {
-                        const isoStr = timeEl.getAttribute('datetime');
-                        if (isoStr) {
-                            const d = new Date(isoStr);
-                            const year = d.getFullYear();
-                            const month = d.getMonth() + 1;
-                            const date = d.getDate();
-                            let hours = d.getHours();
-                            const ampm = hours >= 12 ? '오후' : '오전';
-                            hours = hours % 12;
-                            hours = hours ? hours : 12; 
-                            const minutes = String(d.getMinutes()).padStart(2, '0');
-                            const seconds = String(d.getSeconds()).padStart(2, '0');
-                            
-                            timeStr = `${year}. ${month}. ${date} ${ampm} ${hours}:${minutes}:${seconds}`;
+                            const allText = userNameBox.innerText || "";
+                            const idMatch = allText.match(/@([A-Za-z0-9_]+)/);
+                            if (idMatch) id = idMatch[1];
                         }
-                    }
+                        if (!id) id = "unknown_user";
 
-                    const textContainer = tweet.querySelector('[data-testid="tweetText"]');
-                    if (textContainer) content = extractTextPreservingBreaks(textContainer);
-
-                    // 트위터 HTML을 "완전히" 저장하면 <img src>는 로컬 파일 경로로 바뀌지만,
-                    // 아바타를 감싸는 요소의 style="background-image: url(...)" 안에는
-                    // 원본 pbs.twimg.com 주소가 그대로 남아있으므로 이걸 우선적으로 사용한다.
-                    const avatarBox = tweet.querySelector('[data-testid="Tweet-User-Avatar"]');
-                    let srcAttr = "";
-                    if (avatarBox) {
-                        const bgEl = avatarBox.querySelector('[style*="background-image"]');
-                        if (bgEl) {
-                            const bgMatch = bgEl.getAttribute('style').match(/url\(["']?(.*?)["']?\)/);
-                            if (bgMatch) srcAttr = bgMatch[1];
+                        const timeEl = tweet.querySelector('time');
+                        if (timeEl) {
+                            const isoStr = timeEl.getAttribute('datetime');
+                            if (isoStr) {
+                                const d = new Date(isoStr);
+                                const year = d.getFullYear();
+                                const month = d.getMonth() + 1;
+                                const date = d.getDate();
+                                let hours = d.getHours();
+                                const ampm = hours >= 12 ? '오후' : '오전';
+                                hours = hours % 12;
+                                hours = hours ? hours : 12; 
+                                const minutes = String(d.getMinutes()).padStart(2, '0');
+                                const seconds = String(d.getSeconds()).padStart(2, '0');
+                                
+                                timeStr = `${year}. ${month}. ${date} ${ampm} ${hours}:${minutes}:${seconds}`;
+                            }
                         }
-                        if (!srcAttr) {
-                            const imgEl = avatarBox.querySelector('img') || tweet.querySelector('img[src*="profile_images"]');
-                            if (imgEl) srcAttr = imgEl.getAttribute('src') || "";
-                        }
-                    }
-                    if (srcAttr.includes('_normal.')) {
-                        srcAttr = srcAttr.replace('_normal.', '.');
-                    }
-                    pfp = srcAttr;
 
-                    if (name && content) {
-                        extractedRows.push({ name, id, time: timeStr, content, pfp });
-                    }
-                });
+                        const textContainer = tweet.querySelector('[data-testid="tweetText"]');
+                        if (textContainer) content = extractTextPreservingBreaks(textContainer);
+
+                        // 트위터 HTML을 "완전히" 저장하면 <img src>는 로컬 파일 경로로 바뀌지만,
+                        // 아바타를 감싸는 요소의 style="background-image: url(...)" 안에는
+                        // 원본 pbs.twimg.com 주소가 그대로 남아있으므로 이걸 우선적으로 사용한다.
+                        const avatarBox = tweet.querySelector('[data-testid="Tweet-User-Avatar"]');
+                        let srcAttr = "";
+                        if (avatarBox) {
+                            const bgEl = avatarBox.querySelector('[style*="background-image"]');
+                            if (bgEl) {
+                                const bgMatch = bgEl.getAttribute('style').match(/url\(["']?(.*?)["']?\)/);
+                                if (bgMatch) srcAttr = bgMatch[1];
+                            }
+                            if (!srcAttr) {
+                                const imgEl = avatarBox.querySelector('img') || tweet.querySelector('img[src*="profile_images"]');
+                                if (imgEl) srcAttr = imgEl.getAttribute('src') || "";
+                            }
+                        }
+                        if (srcAttr.includes('_normal.')) {
+                            srcAttr = srcAttr.replace('_normal.', '.');
+                        }
+                        pfp = srcAttr;
+
+                        if (name && content) {
+                            extractedRows.push({ name, id, time: timeStr, content, pfp });
+                        }
+                    });
+                } else {
+                    // 🌟 실시간 페이지 저장이 아니라, 가상 스크롤 때문에 못 긁어오는 멘션 타래 등을
+                    // 스크롤하는 동안 화면을 캡쳐해서 이어붙여주는 확장 프로그램류의 정리된 출력
+                    // 형식(.tweet-card/.tweet-header/.user-name/.user-handle/.tweet-body/.media-container)도
+                    // 함께 지원한다. 이런 도구는 대체로 타임스탬프를 따로 안 남기므로 그 칸은 비워둔다
+                    // (타임스탬프는 원래 선택 항목이라 비어 있어도 문제없음).
+                    const cards = doc.querySelectorAll('.tweet-card');
+                    cards.forEach(card => {
+                        let name = "", id = "", content = "", pfp = "";
+
+                        const nameEl = card.querySelector('.user-name');
+                        if (nameEl) name = nameEl.textContent.trim();
+
+                        const handleEl = card.querySelector('.user-handle');
+                        if (handleEl) id = handleEl.textContent.trim().replace(/^@/, '');
+                        if (!id) id = "unknown_user";
+
+                        const bodyEl = card.querySelector('.tweet-body');
+                        if (bodyEl) content = extractTextPreservingBreaks(bodyEl);
+
+                        const pfpEl = card.querySelector('.profile-img');
+                        if (pfpEl) pfp = pfpEl.getAttribute('src') || "";
+                        if (pfp.includes('_normal.')) pfp = pfp.replace('_normal.', '.');
+
+                        if (name && content) {
+                            extractedRows.push({ name, id, time: "", content, pfp });
+                        }
+                    });
+                }
             }
 
             renderPreview();

@@ -43,7 +43,8 @@
         background: var(--surface);
         border-bottom: 1px solid var(--border);
     }
-    .top-nav-brand { font-size: 13.5px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; }
+    .top-nav-brand { font-size: 13.5px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; text-decoration: none; }
+    .top-nav-brand:hover { color: var(--primary); }
     .top-nav-right { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .nav-btn {
         font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: var(--radius-md);
@@ -148,9 +149,8 @@
 
 <!-- 0) 상단 사이트 이동 바 -->
 <div class="top-nav">
-    <div class="top-nav-brand">🧵 타래 저장소</div>
+    <a class="top-nav-brand" href="index.html">🧵 타래 저장소</a>
     <div class="top-nav-right">
-        <span class="nav-btn current">메인 페이지</span>
         <a class="nav-btn" href="extractor.html">타래 뽑기</a>
         <a class="nav-btn" href="maker.html">타래 엮기</a>
     </div>
@@ -165,7 +165,7 @@
     </header>
 
     <div class="lead-card">
-        <b>트위터(X), 마스토돈, 디스코드, 카카오톡</b>에서 나눈 다채롭고 소중한 이야기를 언제든 다시 펼쳐볼 수 있도록<b>타래(CSV)</b>로 뽑아 저장하고, 필요할 때 다시 열어 <b>HTML이나 캡쳐 이미지</b>로 엮어주기 위한 사이트 타래 저장소입니다.<br>
+        <b>트위터(X), 마스토돈, 디스코드, 카카오톡</b>에서 나눈 다채롭고 소중한 이야기를 언제든 다시 펼쳐볼 수 있도록 <b>타래(CSV)</b>로 뽑아 저장하고, 필요할 때 다시 열어 <b>HTML이나 캡쳐 이미지</b>로 엮어주기 위한 사이트 <b>타래 저장소</b>입니다.<br>
         올린 내용은 서버로 <b>전혀 전송되지 않으며</b>, 모든 가공과 처리는 <b>이 브라우저 안에서만</b> 이루어집니다. 추후 좀 더 편리한 가공을 위한 유료 툴킷을 배포할 예정이 있지만 기본적인 타래 뽑기와 타래 엮기 사이트는 <b>무료 배포</b>로 유지됩니다.
     </div>
 
@@ -174,7 +174,7 @@
             <div class="tool-step">Step 1</div>
             <div class="tool-icon">📤</div>
             <h2>타래 뽑기</h2>
-            <p>트위터·마스토돈·카카오톡·디스코드에서 대화를 추출해 백업용 타래(CSV) 파일로 저장해요.</p>
+            <p>트위터·마스토돈·카카오톡·디스코드에서 대화를 추출하여 백업용 타래(CSV) 파일로 저장해요.</p>
             <div class="tool-cta">뽑으러 가기 <span class="arrow">→</span></div>
         </a>
 
@@ -182,7 +182,7 @@
             <div class="tool-step">Step 2</div>
             <div class="tool-icon">📖</div>
             <h2>타래 엮기</h2>
-            <p>저장했던 타래(CSV) 파일을 불러와 채팅 형태로 예쁘게 펼치고, 웹 문서(HTML)나 이미지로 다시 보관해요.</p>
+            <p>저장한 타래(CSV) 파일을 불러와 원하는 채팅 형태로 펼치고, 웹 문서나 이미지로 다시 엮어요.</p>
             <div class="tool-cta">엮으러 가기 <span class="arrow">→</span></div>
         </a>
     </div>
