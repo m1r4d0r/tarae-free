@@ -86,6 +86,21 @@
         .info-card a { color: var(--primary); font-weight: 600; text-decoration: none; }
         .info-card a:hover { color: var(--info-text-strong); }
 
+        /* 안내 문구(두 줄) + 우측 버튼을 한 줄 안에서 세로 중앙 정렬로 붙이는 래퍼 */
+        .note-flex { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .note-flex .note-text { min-width: 0; }
+
+        /* 외부링크 홍보 버튼 (흰색, 텍스트에 크게 튀지 않도록 담백하게) */
+        .ext-link-btn {
+            flex-shrink: 0;
+            display: inline-flex; align-items: center;
+            padding: 4px 11px; border-radius: 999px;
+            background: #ffffff; border: 1px solid var(--primary); color: var(--primary) !important;
+            font-size: 11.5px; font-weight: 600; text-decoration: none; white-space: nowrap;
+            box-shadow: 0 1px 3px rgba(94,124,138,0.18); transition: background 0.15s, box-shadow 0.15s;
+        }
+        .ext-link-btn:hover { background: var(--primary); color: #ffffff !important; box-shadow: 0 2px 6px rgba(94,124,138,0.28); }
+
         .control-group { margin-bottom: 20px; }
         .control-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 8px; }
 
@@ -126,6 +141,40 @@
 
         .action-btn { display: block; width: 100%; font-size: 14px; font-weight: 600; padding: 12px; border-radius: var(--radius-md); border: none; background: var(--primary); color: white; cursor: pointer; text-align: center; margin-top: 20px; transition: opacity 0.15s; }
         .action-btn:hover { opacity: 0.9; }
+
+        /* 중복 감지 안내 바 + 정리 버튼 */
+        .dup-notice {
+            display: none; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+            margin-top: 12px; padding: 12px 14px; border-radius: var(--radius-md);
+            background: #FBEDE9; border: 1px solid #E7B7A8; color: #8a4a34; font-size: 13px; font-weight: 600;
+        }
+        .dup-clean-btn {
+            font-size: 13px; font-weight: 700; padding: 8px 14px; border-radius: 7px; border: 1px solid #d98b6f;
+            background: #ffffff; color: #b5502f; cursor: pointer; white-space: nowrap; transition: background 0.15s;
+        }
+        .dup-clean-btn:hover { background: #fdf2ee; }
+
+        /* 추출 실패(0건) 안내 줄 — 어떤 플랫폼이든 못 읽어오면 한 줄로 알려준다 */
+        .error-notice {
+            display: none; align-items: center; gap: 8px;
+            margin-top: 18px; padding: 13px 15px; border-radius: var(--radius-md);
+            background: #FBE4E4; border: 1px solid #E4A9A9; color: #9c3838; font-size: 13.5px; font-weight: 600; line-height: 1.5;
+        }
+        .error-notice::before { content: "⚠️"; }
+
+        /* 미리보기에서 중복 행 색칠: 원본은 옅게, 삭제 대상(2번째 이후 사본)은 진하게 + 표식 */
+        tr.dup-origin td { background: #FCF3E8; }
+        tr.dup-removable td { background: #FBE4DC; }
+        .dup-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px; font-size: 10px; font-weight: 700; background: #d98b6f; color: #fff; vertical-align: middle; }
+
+        /* 토스트 알림 */
+        .toast {
+            position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+            max-width: calc(100% - 40px); background: #2b2a27; color: #fff; font-size: 13.5px; font-weight: 600;
+            padding: 13px 18px; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.22);
+            opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; z-index: 1000; line-height: 1.5;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     </style>
 </head>
 <body>
@@ -155,8 +204,13 @@
             <ul>
                 <li>마스토돈·트위터는 사이트 구조가 바뀌면 추출이 실패할 수 있어요. 정상 작동하지 않으면 <a href="index.html">메인 페이지</a>의 문의 방법으로 알려주세요.</li>
                 <li>마스토돈·트위터는 HTML 저장 시 <b>웹페이지, 전부</b>가 아니라 다른 형식으로 저장하면 작동하지 않습니다.</li>
-                <li>트위터는 플랫폼 특성상 긴 대화의 경우 한번에 전부 저장되지 않을 수 있습니다.</li>
                 <li>카카오톡, 디스코드는 아이디를 임의 생성하고 프로필 이미지는 수집되지 않습니다. 뷰어에서 별도로 수정해주세요.</li>
+                <li>
+                    <div class="note-flex">
+                        <span class="note-text">트위터는 플랫폼 특성상 긴 대화의 경우 한번에 저장되지 않을 수 있습니다.<br>대화 저장 과정에서 잘린다면 별도 확장 프로그램을 이용해보세요.</span>
+                        <a class="ext-link-btn" href="https://jinlikealways.tistory.com/208" target="_blank" rel="noopener noreferrer">트위터 타래 백업기</a>
+                    </div>
+                </li>
             </ul>
         </div>
 
@@ -183,6 +237,9 @@
             <textarea class="discord-textarea" id="discordText" placeholder="디스코드 앱에서 전체 드래그 복사(Ctrl+C)한 내용을 여기에 그대로 붙여넣으세요 (Ctrl+V)."></textarea>
         </div>
 
+        <!-- 추출 실패 안내: 파일/텍스트를 넣었는데 한 건도 못 읽으면 여기 한 줄로 표시된다 -->
+        <div class="error-notice" id="errorNotice"></div>
+
         <!-- 3. 결과 테이블 프리뷰 검증 파트 -->
         <div class="preview-box" id="previewBox">
             <label>3. 추출 결과 검증 미리보기 (<span id="countRow">0</span>건 추출됨)</label>
@@ -196,6 +253,13 @@
                     <button class="toggle-btn active" data-val="show">표시하기</button>
                     <button class="toggle-btn" data-val="hide">지우기</button>
                 </div>
+            </div>
+
+            <!-- 중복 감지 안내 바: 완전히 똑같은 행이 있으면 나타난다. 자동 삭제는 하지 않고,
+                 사용자가 [중복 정리] 버튼을 눌러 삭제 건수를 확인한 뒤에만 지운다(안전장치). -->
+            <div class="dup-notice" id="dupNotice">
+                <span id="dupNoticeText">중복된 행이 있어요. 정리가 필요하면 중복 정리 버튼을 눌러주세요.</span>
+                <button class="dup-clean-btn" id="btnCleanDup">🧹 중복 정리</button>
             </div>
 
             <div class="table-wrapper">
@@ -223,6 +287,9 @@
         </div>
     </div>
 
+    <!-- 토스트 알림 (중복 감지/정리 완료 등) -->
+    <div class="toast" id="toast"></div>
+
     <script>
         let extractedRows = [];
 
@@ -244,6 +311,7 @@
             htmlFileInput.value = "";
             discordTextArea.value = "";
             previewBox.style.display = "none";
+            document.getElementById('errorNotice').style.display = "none"; // 플랫폼 바꾸면 이전 실패 안내도 지운다
 
             // 답멘 아이디 스위치는 마스토돈일 때만 노출하고, 플랫폼을 바꿀 때마다 기본값(표시하기)으로 되돌린다
             const mastodonMentionSection = document.getElementById('mastodonMentionSection');
@@ -303,8 +371,13 @@
             reader.readAsText(file, 'UTF-8');
         });
 
-        // 디스코드 실시간 텍스트 입력 감지
+        // 디스코드 실시간 텍스트 입력 감지. 빈 입력이면 실패 안내를 띄우지 않고 그냥 초기화한다.
         discordTextArea.addEventListener('input', function() {
+            if (this.value.trim() === '') {
+                extractedRows = [];
+                renderPreview(false);
+                return;
+            }
             parseDiscordText(this.value);
         });
 
@@ -331,12 +404,24 @@
         function parseKakaoText(text) {
             const rawLines = text.split(/\r\n|\r|\n/);
 
-            // 모바일 내보내기 형식: "2026년 7월 12일 오후 1:40, 이름 : 내용" (날짜+시간이 매 메시지에 다 붙음)
+            // 안드로이드 모바일 내보내기 형식: "2026년 7월 12일 오후 1:40, 이름 : 내용" (날짜+시간이 매 메시지에 다 붙음)
             const mobileHeaderRegex = /^(\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*(?:오전|오후)\s*\d{1,2}:\d{2}),\s*([^:]+?)\s*:\s*(.*)$/;
+            // iOS 모바일 내보내기 형식: "2026. 6. 30. 15:44, 이름 : 내용" (마침표 구분 날짜 + 끝 마침표 + 24시간제, 오전/오후 없음)
+            const iosHeaderRegex = /^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{1,2}):(\d{2}),\s*([^:]+?)\s*:\s*(.*)$/;
+            // iOS 시스템 안내 줄: "2026. 6. 30. 15:44: 챗지다티님이 …초대했습니다." — 시각 뒤에 (쉼표+이름이 아니라) 콜론이 바로 온다
+            const iosSystemRegex = /^\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.\s*\d{1,2}:\d{2}:\s/;
             // PC 내보내기 형식: "[이름] [오전 6:58] 내용" (시간만 있고 날짜는 별도의 구분선 줄에만 있음)
             const pcHeaderRegex = /^\[([^\]]+)\]\s*\[((?:오전|오후)\s*\d{1,2}:\d{2})\]\s*(.*)$/;
             const systemRegex = /님이 (들어왔습니다|나갔습니다)\.?\s*$/;
             const titleOrSavedRegex = /님과 카카오톡 대화\s*$|^저장한 날짜\s*[:：]/;
+
+            // 24시간제 시각(시,분)을 기존 파서와 같은 "오전/오후 h:mm" 표기로 바꾼다.
+            // 이렇게 하면 아래의 날짜 병합(getDatePart)과 ISO 변환(toWebTimestamp)을 그대로 재사용할 수 있다.
+            function to12h(hour24, min) {
+                const ampm = hour24 < 12 ? '오전' : '오후';
+                let h = hour24 % 12; if (h === 0) h = 12;
+                return `${ampm} ${h}:${min}`;
+            }
 
             // 날짜 구분선(모바일/PC 두 형식 다 지원) — 줄 전체가 "날짜"로만 이루어진 경우에만 구분선으로
             // 인정해서, 실제 대사 내용 중에 우연히 날짜스러운 문구가 있어도 오인하지 않게 한다.
@@ -380,7 +465,16 @@
                     return;
                 }
 
-                // 모바일 형식 시도
+                // iOS 형식 시도: "2026. 6. 30. 15:44, 이름 : 내용"
+                m = line.match(iosHeaderRegex);
+                if (m) {
+                    flush();
+                    const timeStr = `${m[1]}. ${+m[2]}. ${+m[3]} ${to12h(+m[4], m[5])}`;
+                    current = { name: m[6].trim(), time: timeStr, contentLines: [m[7]] };
+                    return;
+                }
+
+                // 안드로이드 모바일 형식 시도
                 m = line.match(mobileHeaderRegex);
                 if (m) {
                     flush();
@@ -389,8 +483,8 @@
                     return;
                 }
 
-                // 입장/퇴장 알림, 제목/저장정보 줄은 버림
-                if (systemRegex.test(trimmed) || titleOrSavedRegex.test(trimmed)) return;
+                // 입장/퇴장/초대 등 시스템 안내 줄, 제목/저장정보 줄은 버림
+                if (systemRegex.test(trimmed) || iosSystemRegex.test(trimmed) || titleOrSavedRegex.test(trimmed)) return;
 
                 // 날짜 구분선이면 날짜만 기억해두고 버림 (실제 대사 줄이 아님)
                 const dividerDate = tryExtractDividerDate(trimmed);
@@ -422,7 +516,7 @@
                 }
             });
 
-            renderPreview();
+            renderPreview(true);
         }
 
         // 디스코드 줄바꿈(엔터) 보존 파싱 엔진 (🛠️ 에러 유발 가능성 정규식 전면 배제 및 안전화 수리)
@@ -476,7 +570,7 @@
                     }
                 }
             }
-            renderPreview();
+            renderPreview(true);
         }
 
         // HTML 웹문서 파서 (마스토돈 / 트위터)
@@ -664,12 +758,12 @@
                 } else {
                     // 🌟 실시간 페이지 저장이 아니라, 가상 스크롤 때문에 못 긁어오는 멘션 타래 등을
                     // 스크롤하는 동안 화면을 캡쳐해서 이어붙여주는 확장 프로그램류의 정리된 출력
-                    // 형식(.tweet-card/.tweet-header/.user-name/.user-handle/.tweet-body/.media-container)도
-                    // 함께 지원한다. 이런 도구는 대체로 타임스탬프를 따로 안 남기므로 그 칸은 비워둔다
+                    // 형식(.tweet-card/.tweet-header/.user-name/.user-handle/.tweet-time/.tweet-body/.media-container)도
+                    // 함께 지원한다. 타임스탬프(<time class="tweet-time">)가 있으면 뽑아 쓰고, 없으면 비워둔다
                     // (타임스탬프는 원래 선택 항목이라 비어 있어도 문제없음).
                     const cards = doc.querySelectorAll('.tweet-card');
                     cards.forEach(card => {
-                        let name = "", id = "", content = "", pfp = "";
+                        let name = "", id = "", timeStr = "", content = "", pfp = "";
 
                         const nameEl = card.querySelector('.user-name');
                         if (nameEl) name = nameEl.textContent.trim();
@@ -677,6 +771,32 @@
                         const handleEl = card.querySelector('.user-handle');
                         if (handleEl) id = handleEl.textContent.trim().replace(/^@/, '');
                         if (!id) id = "unknown_user";
+
+                        // 타임스탬프: 확장 프로그램 출력은 <time class="tweet-time">에 날짜를 남긴다.
+                        // ISO(datetime 속성)가 있으면 실시간 파서와 똑같이 "오전/오후 시:분:초"까지 만들고,
+                        // "2026년 7월 13일" 같은 사람용 표기만 있으면 마스토돈과 같은 "2026. 7. 13" 형식으로 정규화한다.
+                        const timeEl = card.querySelector('.tweet-time, time');
+                        if (timeEl) {
+                            const isoStr = timeEl.getAttribute('datetime');
+                            if (isoStr) {
+                                const d = new Date(isoStr);
+                                if (!isNaN(d.getTime())) {
+                                    const year = d.getFullYear();
+                                    const month = d.getMonth() + 1;
+                                    const date = d.getDate();
+                                    let hours = d.getHours();
+                                    const ampm = hours >= 12 ? '오후' : '오전';
+                                    hours = hours % 12; hours = hours ? hours : 12;
+                                    const minutes = String(d.getMinutes()).padStart(2, '0');
+                                    const seconds = String(d.getSeconds()).padStart(2, '0');
+                                    timeStr = `${year}. ${month}. ${date} ${ampm} ${hours}:${minutes}:${seconds}`;
+                                }
+                            }
+                            if (!timeStr) {
+                                timeStr = (timeEl.getAttribute('title') || timeEl.textContent || "")
+                                    .replace(/년\s*/g, '. ').replace(/월\s*/g, '. ').replace(/일/g, '').trim();
+                            }
+                        }
 
                         const bodyEl = card.querySelector('.tweet-body');
                         if (bodyEl) content = extractTextPreservingBreaks(bodyEl);
@@ -686,38 +806,179 @@
                         if (pfp.includes('_normal.')) pfp = pfp.replace('_normal.', '.');
 
                         if (name && content) {
-                            extractedRows.push({ name, id, time: "", content, pfp });
+                            extractedRows.push({ name, id, time: timeStr, content, pfp });
                         }
                     });
                 }
             }
 
-            renderPreview();
+            renderPreview(true);
         }
 
-        // 프리뷰 테이블 렌더러
-        function renderPreview() {
+        function pad2(v) { return String(v).padStart(2, '0'); }
+
+        // 각 플랫폼이 만들어낸 타임스탬프 문자열을 웹표준(ISO 8601)으로 통일한다.
+        //  - 타임존은 붙이지 않는다(로컬 시각 그대로 표기).
+        //  - 시각이 있으면 "YYYY-MM-DDTHH:mm:ss", 초가 없으면 초를 00으로 채운다.
+        //  - 시각 없이 날짜만 있으면 "YYYY-MM-DD" (없는 시각을 임의로 만들어내지 않는다).
+        //  - 이미 ISO면 그대로 통과시키되 초가 없으면 00을 보정한다(idempotent).
+        //  - 어떤 형식으로도 못 읽으면 원본 문자열을 그대로 보존한다.
+        // 지원 입력 예: "2026. 7. 13 오후 1:40:05", "2026. 7. 13 오전 12:00", "2026. 7. 13".
+        function toWebTimestamp(str) {
+            if (!str) return "";
+            const s = str.trim();
+
+            // 이미 ISO(YYYY-MM-DD[THH:mm[:ss]])인 경우
+            const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+            if (iso) {
+                if (iso[4] === undefined) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+                return `${iso[1]}-${iso[2]}-${iso[3]}T${pad2(iso[4])}:${iso[5]}:${iso[6] ? iso[6] : '00'}`;
+            }
+
+            // 한국어형: "YYYY. M. D (오전/오후 h:mm[:ss])"
+            const m = s.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})(?:\s*(오전|오후)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+            if (!m) return s; // 못 읽으면 원본 보존
+            const datePart = `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+            if (m[5] === undefined) return datePart; // 시각 없음 → 날짜만
+            let hour = +m[5];
+            if (m[4] === '오후' && hour < 12) hour += 12;  // 오후 1시 → 13
+            if (m[4] === '오전' && hour === 12) hour = 0;  // 오전 12시(자정) → 0
+            const sec = m[7] ? m[7] : '00';                // 초 없으면 00
+            return `${datePart}T${pad2(hour)}:${m[6]}:${sec}`;
+        }
+
+        // ISO 타임스탬프를 정렬 비교용 숫자로 변환한다. 해석 불가면 null.
+        function parseTimestampValue(str) {
+            if (!str) return null;
+            const m = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2}))?/);
+            if (!m) return null;
+            return Date.UTC(+m[1], +m[2] - 1, +m[3], m[4] ? +m[4] : 0, m[5] ? +m[5] : 0, m[6] ? +m[6] : 0);
+        }
+
+        // 타임스탬프 기준 오름차순(오래된 것부터) 정렬. 같은 시각이거나 시각을 못 읽는 행은
+        // 원래 순서를 유지(안정 정렬)하고, 시각이 아예 없는 행은 맨 뒤로 보낸다. 타임스탬프를
+        // 하나도 못 읽으면 원래 순서를 그대로 둔다.
+        // (!) 중복 제거는 데이터를 지우는 작업이라 여기서 자동으로 하지 않는다. 감지해서 알려주고,
+        //    사용자가 [중복 정리] 버튼으로 삭제 건수를 확인한 뒤에만 지운다(cleanDuplicates 참고).
+        function sortRows() {
+            const indexed = extractedRows.map((r, i) => ({ r, i, v: parseTimestampValue(r.time) }));
+            if (indexed.some(x => x.v !== null)) {
+                indexed.sort((a, b) => {
+                    if (a.v === null && b.v === null) return a.i - b.i;
+                    if (a.v === null) return 1;
+                    if (b.v === null) return -1;
+                    if (a.v !== b.v) return a.v - b.v;
+                    return a.i - b.i;
+                });
+            }
+            extractedRows = indexed.map(x => x.r);
+        }
+
+        // 한 행의 "완전 일치" 판정용 서명. 모든 칸(이름/아이디/타임스탬프/본문/프로필)이 같아야 중복.
+        function rowSignature(r) {
+            return [r.name, r.id, r.time, r.content, r.pfp].join('');
+        }
+
+        // 현재 extractedRows의 중복 상태 계산.
+        //  - originIdx: 각 중복 그룹의 첫 행(원본, 유지 대상) 인덱스
+        //  - removableIdx: 두 번째 이후 사본(삭제 대상) 인덱스
+        //  - removableCount: 삭제될 행 수
+        function computeDuplicateInfo() {
+            const firstSeenAt = new Map();
+            const originIdx = new Set();
+            const removableIdx = new Set();
+            extractedRows.forEach((r, i) => {
+                const sig = rowSignature(r);
+                if (firstSeenAt.has(sig)) {
+                    originIdx.add(firstSeenAt.get(sig));
+                    removableIdx.add(i);
+                } else {
+                    firstSeenAt.set(sig, i);
+                }
+            });
+            return { originIdx, removableIdx, removableCount: removableIdx.size };
+        }
+
+        // 토스트 알림 (기본 4초 후 사라짐)
+        let toastTimer = null;
+        function showToast(msg, duration = 4000) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+        }
+
+        // 추출 실패(0건) 시 현재 플랫폼에 맞는 안내 문구를 돌려준다.
+        function extractionErrorMessage() {
+            const platform = document.querySelector('#platformGroup .active').dataset.val;
+            switch (platform) {
+                case 'mastodon':
+                    return '타래를 찾지 못했어요. 마스토돈 대화 페이지를 [웹페이지, 전부] 형식으로 저장한 HTML이 맞는지 확인해주세요.';
+                case 'twitter':
+                    return '타래를 찾지 못했어요. 트위터(X) 대화 페이지를 [웹페이지, 전부] 형식으로 저장한 HTML이 맞는지 확인해주세요.';
+                case 'kakao':
+                    return '대화를 찾지 못했어요. 카카오톡 대화 내보내기(.txt) 파일이 맞는지 확인해주세요.';
+                case 'discord':
+                    return '대화를 찾지 못했어요. 디스코드에서 복사한 대화 내용이 맞는지 확인해주세요.';
+                default:
+                    return '내용을 찾지 못했어요. 올바른 파일/내용이 맞는지 확인해주세요.';
+            }
+        }
+
+        // 프리뷰 테이블 렌더러.
+        // fromLoad=true 이면(파일/텍스트를 새로 불러온 직후) 중복이 감지될 때 안내 토스트를 띄우고,
+        // 한 건도 못 읽었으면 실패 안내 줄을 띄운다.
+        function renderPreview(fromLoad = false) {
             const tbody = document.getElementById('previewBody');
             tbody.innerHTML = "";
-            
+
+            const dupNotice = document.getElementById('dupNotice');
+
+            // 타임스탬프를 웹표준(ISO 8601)으로 통일한다(idempotent — 이미 ISO면 그대로).
+            extractedRows.forEach(r => { r.time = toWebTimestamp(r.time); });
+
+            // 정렬은 자동, 중복 제거는 수동. 그리기 전에 정렬만 적용한다.
+            sortRows();
+
+            const errorNotice = document.getElementById('errorNotice');
+
             if(extractedRows.length === 0) {
+                if (dupNotice) dupNotice.style.display = "none";
                 previewBox.style.display = "none";
+                // 파일/텍스트를 넣고 시도했는데(fromLoad) 한 건도 못 읽었으면 플랫폼별 안내를 한 줄 띄운다.
+                if (fromLoad) {
+                    errorNotice.textContent = extractionErrorMessage();
+                    errorNotice.style.display = "flex";
+                } else {
+                    errorNotice.style.display = "none";
+                }
                 return;
             }
+            errorNotice.style.display = "none"; // 정상 추출되면 실패 안내는 숨긴다
 
             const currentPlatform = document.querySelector('#platformGroup .active').dataset.val;
             const mentionMode = document.querySelector('#mastodonMentionGroup .active')?.dataset.val || 'show';
             const stripMentions = currentPlatform === 'mastodon' && mentionMode === 'hide';
 
-            extractedRows.forEach(row => {
+            // 중복 감지: 완전히 똑같은 행을 그룹으로 묶어 원본/삭제대상을 구분해 색칠한다.
+            const dupInfo = computeDuplicateInfo();
+
+            extractedRows.forEach((row, idx) => {
                 const tr = document.createElement('tr');
+                const isRemovable = dupInfo.removableIdx.has(idx);
+                const isOrigin = dupInfo.originIdx.has(idx);
+                if (isRemovable) tr.classList.add('dup-removable');
+                else if (isOrigin) tr.classList.add('dup-origin');
+
                 const pfpUrl = (row.pfp || "").trim();
                 const pfpCell = pfpUrl
                     ? `<a href="${escapeHtml(pfpUrl)}" target="_blank" rel="noopener noreferrer">🔗 링크 확인</a>`
                     : `<span class="pfp-empty">없음</span>`;
                 const displayContent = stripMentions ? stripMentionPrefix(row.content) : row.content;
+                const badge = isRemovable ? '<span class="dup-badge">중복</span>' : '';
                 tr.innerHTML = `
-                    <td><b>${escapeHtml(row.name)}</b></td>
+                    <td><b>${escapeHtml(row.name)}</b>${badge}</td>
                     <td>@${escapeHtml(row.id)}</td>
                     <td style="color:#6b6860; font-size:12px;">${escapeHtml(row.time)}</td>
                     <td class="content-cell">${escapeHtml(displayContent)}</td>
@@ -727,6 +988,19 @@
             });
 
             document.getElementById('countRow').innerText = extractedRows.length;
+
+            // 중복 안내 바 노출/숨김. 자동 삭제는 하지 않고 사용자가 버튼을 눌러야 정리된다.
+            if (dupNotice) {
+                if (dupInfo.removableCount > 0) {
+                    document.getElementById('dupNoticeText').textContent =
+                        `중복된 행이 있어요(${dupInfo.removableCount}건). 정리가 필요하면 중복 정리 버튼을 눌러주세요.`;
+                    dupNotice.style.display = "flex";
+                    if (fromLoad) showToast('중복된 행이 있어요. 정리가 필요하면 중복 정리 버튼을 눌러주세요.');
+                } else {
+                    dupNotice.style.display = "none";
+                }
+            }
+
             previewBox.style.display = "block";
         }
 
@@ -734,15 +1008,45 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
         }
 
+        // [중복 정리] 버튼: 삭제 건수를 먼저 확인받고, 동의하면 각 중복 그룹의 첫 행만 남기고 사본을 지운다.
+        function cleanDuplicates() {
+            const info = computeDuplicateInfo();
+            if (info.removableCount === 0) {
+                showToast('정리할 중복 행이 없어요.');
+                return;
+            }
+            const ok = confirm(`총 ${info.removableCount}행이 삭제됩니다. 진행할까요?`);
+            if (!ok) return;
+
+            const seen = new Set();
+            const kept = [];
+            for (const r of extractedRows) {
+                const sig = rowSignature(r);
+                if (seen.has(sig)) continue;
+                seen.add(sig);
+                kept.push(r);
+            }
+            const removed = extractedRows.length - kept.length;
+            extractedRows = kept;
+            renderPreview(true);
+            showToast(`중복 ${removed}행을 정리했어요.`);
+        }
+        document.getElementById('btnCleanDup').addEventListener('click', cleanDuplicates);
+
         // CSV 최종 다운로드 시스템
         document.getElementById('btnDownloadCsv').addEventListener('click', () => {
             if (extractedRows.length === 0) return;
+
+            // 저장 직전에 타임스탬프를 웹표준(ISO)으로 통일하고 정렬만 보장한다. 중복 제거는 사용자가
+            // 직접 [중복 정리]를 눌러야 이뤄지므로 여기서 자동으로 지우지 않는다(정리하지 않은 채 저장도 가능).
+            extractedRows.forEach(r => { r.time = toWebTimestamp(r.time); });
+            sortRows();
 
             const currentPlatform = document.querySelector('#platformGroup .active').dataset.val;
             const mentionMode = document.querySelector('#mastodonMentionGroup .active')?.dataset.val || 'show';
             const stripMentions = currentPlatform === 'mastodon' && mentionMode === 'hide';
 
-            let csvContent = "\uFEFF이름,아이디,타임스탬프,본문,프로필이미지\n";
+            let csvContent = "﻿이름,아이디,타임스탬프,본문,프로필이미지\n";
 
             extractedRows.forEach(row => {
                 const exportContent = stripMentions ? stripMentionPrefix(row.content) : row.content;
