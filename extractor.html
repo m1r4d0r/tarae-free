@@ -156,11 +156,25 @@
 
         /* 추출 실패(0건) 안내 줄 — 어떤 플랫폼이든 못 읽어오면 한 줄로 알려준다 */
         .error-notice {
-            display: none; align-items: center; gap: 8px;
+            display: none; align-items: center; gap: 8px; flex-wrap: wrap;
             margin-top: 18px; padding: 13px 15px; border-radius: var(--radius-md);
             background: #FBE4E4; border: 1px solid #E4A9A9; color: #9c3838; font-size: 13.5px; font-weight: 600; line-height: 1.5;
         }
         .error-notice::before { content: "⚠️"; }
+        .error-notice .error-msg { flex: 1; min-width: 0; }
+        .error-notice .error-help {
+            margin-left: auto; white-space: nowrap; color: #9c3838;
+            font-weight: 700; text-decoration: underline; text-underline-offset: 2px;
+        }
+        .error-notice .error-help:hover { color: #7a2b2b; }
+        /* 업로드 영역 아래 도움말 링크 — 오른쪽 정렬.
+           실패 문구가 뜨면 그 안에 같은 링크가 생기므로 이 줄은 숨긴다(중복 방지). */
+        .help-link-row { text-align: right; margin-top: 9px; }
+        .help-link {
+            display: inline-block; font-size: 12.5px;
+            color: #7d7a73; text-decoration: underline; text-underline-offset: 2px;
+        }
+        .help-link:hover { color: #5E7C8A; }
 
         /* 미리보기에서 중복 행 색칠: 원본은 옅게, 삭제 대상(2번째 이후 사본)은 진하게 + 표식 */
         tr.dup-origin td { background: #FCF3E8; }
@@ -184,7 +198,7 @@
         <a class="top-nav-brand" href="index.html">🧵 타래 저장소</a>
         <div class="top-nav-right">
             <span class="nav-btn current">타래 뽑기</span>
-            <a class="nav-btn" href="maker.html">타래 엮기</a>
+            <a class="nav-btn" href="editor.html">타래 엮기</a>
         </div>
     </div>
 
@@ -196,7 +210,7 @@
             <h3>💡 사용 방법</h3>
             <ul>
                 <li><b>마스토돈 / 트위터</b>: 대화 타래 페이지에서 <b>[우클릭] → [다른 이름으로 저장]</b> (파일 형식: <b>웹페이지, 전부</b>)으로 내려받은 HTML 파일을 업로드하세요. (트위터는 스크롤 캡쳐를 이어붙여주는 확장 프로그램의 정리된 HTML 출력도 함께 지원해요.)</li>
-                <li><b>카카오톡</b>: <b>[메뉴] → [설정] → [대화 내용 내보내기] → [텍스트 메시지만 저장]</b> (모바일) / <b>[메뉴] → [대화 내용] → [대화 저장하기]</b> (PC) 로 저장한 <b>TXT 파일</b> 또는 <b>ZIP 파일(아이폰 환경)을 압축해제 없이</b> 업로드하세요. </li>
+                <li><b>카카오톡</b>: <b>[메뉴] → [설정] → [대화 내용 내보내기] → [텍스트 메시지만 저장]</b> (모바일) / <b>[메뉴] → [대화 내용] → [대화 저장하기]</b> (PC) 로 저장한 TXT 파일을 업로드하세요.</li>
                 <li><b>디스코드</b>: 대화 내용을 드래그로 복사(Ctrl+C)해서 아래 텍스트 창에 붙여넣기(Ctrl+V) 하세요.</li>
             </ul>
 
@@ -230,6 +244,9 @@
             <label>2. 파일 업로드</label>
             <label class="file-label" for="htmlFile" id="uploadLabel">📁 다른 이름으로 저장한 HTML 파일 선택</label>
             <input type="file" id="htmlFile" accept=".html,.htm">
+            <div class="help-link-row" id="doctorLinkRow">
+                <a class="help-link" id="doctorLinkUpload" href="#" target="_blank" rel="noopener">파일이 안 읽히나요? 원인 확인하기</a>
+            </div>
         </div>
 
         <div class="control-group" id="discordInputSection" style="display: none;">
@@ -296,6 +313,38 @@
     <script>
         let extractedRows = [];
 
+        // 타래 검사기(진단기) 주소. 같은 폴더에 같은 위계로 두는 기준의 상대경로.
+        // 파일명을 바꾸거나 다른 폴더에 두면 이 한 줄만 고치면 된다. (예: 'tools/tarae-doctor.html')
+        const DOCTOR_URL = 'tarae-doctor.html';
+        document.getElementById('doctorLinkUpload').href = DOCTOR_URL;
+
+        // 실패 안내를 표시한다. 파일 기반 플랫폼일 때는 오른쪽에 진단기 링크를 함께 건다.
+        function toggleDoctorLinkRow(show) {
+            const row = document.getElementById('doctorLinkRow');
+            if (row) row.style.display = show ? "" : "none";
+        }
+
+        function hideErrorNotice() {
+            document.getElementById('errorNotice').style.display = "none";
+            toggleDoctorLinkRow(true);      // 안내가 사라지면 윗줄 링크를 되살린다
+        }
+
+        function showErrorNotice(msg) {
+            const el = document.getElementById('errorNotice');
+            const platform = document.querySelector('#platformGroup .active').dataset.val;
+            el.innerHTML = '<span class="error-msg"></span>';
+            el.querySelector('.error-msg').textContent = msg;
+            if (platform !== 'discord') {          // 디스코드는 붙여넣기 방식이라 진단기 대상이 아니다
+                const a = document.createElement('a');
+                a.className = 'error-help';
+                a.href = DOCTOR_URL; a.target = '_blank'; a.rel = 'noopener';
+                a.textContent = '왜 안 읽히는지 확인해보기 →';
+                el.appendChild(a);
+            }
+            el.style.display = "flex";
+            toggleDoctorLinkRow(false);     // 안내 안에 같은 링크가 생기므로 윗줄은 숨긴다
+        }
+
         const htmlFileInput = document.getElementById('htmlFile');
         const discordTextArea = document.getElementById('discordText');
         const fileInputSection = document.getElementById('fileInputSection');
@@ -314,7 +363,7 @@
             htmlFileInput.value = "";
             discordTextArea.value = "";
             previewBox.style.display = "none";
-            document.getElementById('errorNotice').style.display = "none"; // 플랫폼 바꾸면 이전 실패 안내도 지운다
+            hideErrorNotice(); // 플랫폼 바꾸면 이전 실패 안내도 지운다
 
             // 답멘 아이디 스위치는 마스토돈일 때만 노출하고, 플랫폼을 바꿀 때마다 기본값(표시하기)으로 되돌린다
             const mastodonMentionSection = document.getElementById('mastodonMentionSection');
@@ -328,7 +377,7 @@
                 fileInputSection.style.display = "block";
                 discordInputSection.style.display = "none";
                 htmlFileInput.accept = ".zip,.txt";
-                uploadLabel.innerText = "📁 카카오톡 zip 또는 .txt 파일 선택 (zip은 압축 해제 없이 바로)";
+                uploadLabel.innerText = "📁 카카오톡 zip 또는 .txt 파일 선택 (zip은 풀지 않고 바로)";
             } else {
                 fileInputSection.style.display = "block";
                 discordInputSection.style.display = "none";
@@ -388,17 +437,21 @@
                             .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
                         if (txtNames.length === 0) {
                             previewBox.style.display = "none";
-                            errorNotice.textContent = "zip 안에서 .txt 대화 파일을 찾지 못했어요. 카카오톡에서 내보낸 zip이 맞는지 확인해주세요.";
-                            errorNotice.style.display = "flex";
+                            showErrorNotice("zip 안에서 .txt 대화 파일을 찾지 못했어요. 카카오톡에서 내보낸 zip이 맞는지 확인해주세요.");
                             return;
                         }
-                        const dec = new TextDecoder('utf-8'); // 선두 BOM 자동 제거
-                        const text = txtNames.map(n => dec.decode(files[n])).join('\n');
+                        // 직접 올린 .txt 는 readAsText 가 BOM 을 보고 인코딩을 정해준다.
+                        // zip 안의 파일도 같게 동작하도록 여기서 BOM 을 직접 확인한다.
+                        function decodeEntry(bytes) {
+                            if (bytes[0] === 0xFF && bytes[1] === 0xFE) return new TextDecoder('utf-16le').decode(bytes);
+                            if (bytes[0] === 0xFE && bytes[1] === 0xFF) return new TextDecoder('utf-16be').decode(bytes);
+                            return new TextDecoder('utf-8').decode(bytes); // 선두 UTF-8 BOM 은 자동 제거됨
+                        }
+                        const text = txtNames.map(n => decodeEntry(files[n])).join('\n');
                         dispatch(text);
                     } catch (err) {
                         previewBox.style.display = "none";
-                        errorNotice.textContent = "zip 을 여는 데 실패했어요. 파일이 손상되었거나 zip 형식이 아닐 수 있어요. (풀린 .txt 를 직접 올려도 됩니다.)";
-                        errorNotice.style.display = "flex";
+                        showErrorNotice("zip 을 여는 데 실패했어요. 파일이 손상되었거나 zip 형식이 아닐 수 있어요. (풀린 .txt 를 직접 올려도 됩니다.)");
                     }
                 };
                 reader.readAsArrayBuffer(file);
@@ -447,9 +500,10 @@
             // 안드로이드 모바일 내보내기 형식: "2026년 7월 12일 오후 1:40, 이름 : 내용" (날짜+시간이 매 메시지에 다 붙음)
             const mobileHeaderRegex = /^(\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*(?:오전|오후)\s*\d{1,2}:\d{2}),\s*([^:]+?)\s*:\s*(.*)$/;
             // iOS 모바일 내보내기 형식: "2026. 6. 30. 15:44, 이름 : 내용" (마침표 구분 날짜 + 끝 마침표 + 24시간제, 오전/오후 없음)
-            const iosHeaderRegex = /^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{1,2}):(\d{2}),\s*([^:]+?)\s*:\s*(.*)$/;
+            // 아이폰이 24시간제가 아니면 "2026. 2. 26. 오전 8:26," 처럼 나온다. 오전/오후를 선택적으로 받는다.
+            const iosHeaderRegex = /^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(?:(오전|오후)\s*)?(\d{1,2}):(\d{2}),\s*([^:]+?)\s*:\s*(.*)$/;
             // iOS 시스템 안내 줄: "2026. 6. 30. 15:44: 챗지다티님이 …초대했습니다." — 시각 뒤에 (쉼표+이름이 아니라) 콜론이 바로 온다
-            const iosSystemRegex = /^\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.\s*\d{1,2}:\d{2}:\s/;
+            const iosSystemRegex = /^\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.\s*(?:(?:오전|오후)\s*)?\d{1,2}:\d{2}:\s/;
             // PC 내보내기 형식: "[이름] [오전 6:58] 내용" (시간만 있고 날짜는 별도의 구분선 줄에만 있음)
             const pcHeaderRegex = /^\[([^\]]+)\]\s*\[((?:오전|오후)\s*\d{1,2}:\d{2})\]\s*(.*)$/;
             const systemRegex = /님이 (들어왔습니다|나갔습니다)\.?\s*$/;
@@ -461,6 +515,12 @@
                 const ampm = hour24 < 12 ? '오전' : '오후';
                 let h = hour24 % 12; if (h === 0) h = 12;
                 return `${ampm} ${h}:${min}`;
+            }
+            // 오전/오후 + 12시간 표기를 24시간으로. 오전 12시=0시(자정), 오후 12시=12시(정오).
+            function ampmTo24(ampm, hour12) {
+                let h = hour12 % 12;
+                if (ampm === '오후') h += 12;
+                return h;
             }
 
             // 날짜 구분선(모바일/PC 두 형식 다 지원) — 줄 전체가 "날짜"로만 이루어진 경우에만 구분선으로
@@ -509,8 +569,10 @@
                 m = line.match(iosHeaderRegex);
                 if (m) {
                     flush();
-                    const timeStr = `${m[1]}. ${+m[2]}. ${+m[3]} ${to12h(+m[4], m[5])}`;
-                    current = { name: m[6].trim(), time: timeStr, contentLines: [m[7]] };
+                    let hour = +m[5];
+                    if (m[4]) hour = ampmTo24(m[4], hour);   // 12시간제로 적혀 있으면 24시간으로 맞춘다
+                    const timeStr = `${m[1]}. ${+m[2]}. ${+m[3]} ${to12h(hour, m[6])}`;
+                    current = { name: m[7].trim(), time: timeStr, contentLines: [m[8]] };
                     return;
                 }
 
@@ -988,14 +1050,13 @@
                 previewBox.style.display = "none";
                 // 파일/텍스트를 넣고 시도했는데(fromLoad) 한 건도 못 읽었으면 플랫폼별 안내를 한 줄 띄운다.
                 if (fromLoad) {
-                    errorNotice.textContent = extractionErrorMessage();
-                    errorNotice.style.display = "flex";
+                    showErrorNotice(extractionErrorMessage());
                 } else {
-                    errorNotice.style.display = "none";
+                    hideErrorNotice();
                 }
                 return;
             }
-            errorNotice.style.display = "none"; // 정상 추출되면 실패 안내는 숨긴다
+            hideErrorNotice(); // 정상 추출되면 실패 안내는 숨긴다
 
             const currentPlatform = document.querySelector('#platformGroup .active').dataset.val;
             const mentionMode = document.querySelector('#mastodonMentionGroup .active')?.dataset.val || 'show';
