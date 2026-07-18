@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>타래 엮기</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%A7%B5</text></svg>">
+    <!-- html2canvas 라이브러리 포함 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* 클로드 스타일 연한 베이지 & 세련된 톤 테마 변수 */
+        :root {
+            --bg: #f8f7f4;
+            --surface: #ffffff;
+            --surface2: #f2f0ec;
+            --border: rgba(0, 0, 0, 0.10);
+            --border2: rgba(0, 0, 0, 0.18);
+            --text: #1a1916;
+            --text2: #6b6860;
+            --text3: #a09e99;
+            --primary: #5E7C8A;
+            --primary-soft: #E9EEF0;
+            --danger: #b3584f;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.05);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+            
+            --preview-bg: #ffffff;
+        }
+
+        /* 다크모드 배경 */
+        body[data-theme="dark"] {
+            /* 🌟 기존 값이 배경도 너무 어둡고, 특히 --text3(부가 설명/타임스탬프 등)가 배경 대비
+               명도차가 거의 없어서 잘 안 보인다는 피드백 반영 — 배경은 아주 살짝만 밝히고,
+               --text3는 깃허브 다크모드가 실제 쓰는 더 밝은 톤으로 교체했다. */
+            --bg: #12161c;
+            --surface: #1c222b;
+            --surface2: #262d37;
+            --border: rgba(255, 255, 255, 0.08);
+            --border2: rgba(255, 255, 255, 0.15);
+            --text: #f0f6fc;
+            --text2: #8b949e;
+            --text3: #6e7681;
+            --preview-bg: #12161c;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 상단 사이트 이동 바 */
+        .top-nav {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+        .top-nav-brand { font-size: 13.5px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; text-decoration: none; }
+        .top-nav-brand:hover { color: var(--primary); }
+        .top-nav-right { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .nav-btn {
+            font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: var(--radius-md);
+            border: 1px solid var(--border2); color: var(--text2); background: var(--surface);
+            text-decoration: none; transition: background 0.15s, color 0.15s;
+        }
+        .nav-btn:hover { background: var(--surface2); color: var(--text); }
+        .nav-btn.current { background: var(--primary-soft); color: var(--primary); border-color: var(--primary-soft); cursor: default; }
+
+        /* 3단 레이아웃 시스템 */
+        .app-body { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+        .sidebar-left { width: 22%; min-width: 290px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .preview-container { flex: 1; background: var(--bg); display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; position: relative; }
+        .sidebar-right { width: 22%; min-width: 290px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+
+        .scrollable { overflow-y: auto; padding: 20px; flex: 1; }
+        
+        h3 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 14px; letter-spacing: -0.3px; display: flex; align-items: center; gap: 6px;}
+
+        /* 알록달록한 이모지 아이콘을 무채색 톤으로 통일 */
+        .ico { filter: grayscale(1) opacity(0.55); }
+        body[data-theme="dark"] .ico { opacity: 0.8; }
+        .control-group { margin-bottom: 20px; }
+        .control-group label { display: block; margin-bottom: 8px; font-size: 11.5px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* 파일 업로드 커스텀 스타일 */
+        .file-label { display: block; text-align: center; padding: 10px; background: var(--surface2); border: 1px dashed var(--border2); border-radius: var(--radius-md); cursor: pointer; font-size: 12.5px; font-weight: 600; transition: background 0.15s; }
+        .file-label:hover { background: var(--border); }
+        input[type="file"] { display: none; }
+
+        /* 나란한 형태의 세련된 라디오 버튼 토글 그룹 */
+        .btn-group { display: flex; flex-wrap: wrap; gap: 4px; background: var(--surface2); padding: 4px; border-radius: var(--radius-md); }
+        .toggle-btn { flex: 1; min-width: 50px; font-size: 11.5px; font-weight: 600; padding: 6px 4px; border-radius: 7px; border: none; background: transparent; color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; text-align: center;}
+        .toggle-btn:hover { color: var(--text); background: rgba(0,0,0,0.03); }
+        body[data-theme="dark"] .toggle-btn:hover { background: rgba(255,255,255,0.03); }
+        .toggle-btn.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-weight: 700; }
+
+        /* 왼쪽 패널 내부 프로필 그리드 영역 */
+        .profile-grid-box { padding-top: 10px; border-top: 1px solid var(--border); margin-top: 20px; }
+        .pfp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 8px; max-height: 220px; overflow-y: auto; padding-right: 4px; }
+        .pfp-grid-item { position: relative; aspect-ratio: 1; background: var(--surface2); border-radius: 50%; border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; overflow: hidden; }
+        .pfp-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+        .pfp-add-btn { border: 1.5px dashed var(--border2); background: transparent; font-size: 18px; color: var(--text3); }
+        .pfp-add-btn:hover { color: var(--primary); border-color: var(--primary); }
+
+        /* 하단 주요 액션 버튼 */
+        .action-box { padding: 20px; border-top: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; gap: 8px; }
+        .core-btn { font-size: 12.5px; font-weight: 600; padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--border2); cursor: pointer; background: var(--surface); color: var(--text); transition: background 0.15s, border-color 0.15s; text-align: center; display: flex; align-items: center; justify-content: center; gap: 7px;}
+        .core-btn:hover { background: var(--surface2); border-color: var(--text3); }
+        .core-btn.primary-action { background: var(--primary); color: white; border-color: var(--primary); font-weight: 700; }
+        .core-btn.primary-action:hover { background: var(--primary); opacity: 0.9; }
+
+        /* 관련된 액션 버튼을 하나의 알약형 그룹으로 묶는 세그먼트 컨트롤 */
+        .action-segment { display: flex; gap: 2px; background: var(--surface); padding: 4px; border-radius: var(--radius-md); }
+        .seg-btn { flex: 1; font-size: 12px; font-weight: 600; padding: 8px 4px; border: none; background: transparent; color: var(--text); border-radius: 7px; cursor: pointer; transition: background 0.15s; text-align: center; }
+        .seg-btn:hover { background: rgba(0,0,0,0.04); }
+        body[data-theme="dark"] .seg-btn:hover { background: rgba(255,255,255,0.05); }
+        .action-segment-warn { background: #f3e4e1; }
+        .action-segment-warn .seg-btn { color: var(--danger); }
+        .action-segment-warn .seg-btn:hover { background: rgba(179, 88, 79, 0.12); }
+        body[data-theme="dark"] .action-segment-warn { background: rgba(179, 88, 79, 0.16); }
+
+        /* 미리보기 화면 코어 */
+        .preview-window {
+            width: 100%;
+            max-width: 660px;
+            min-height: 100%;
+            background-color: var(--preview-bg);
+            padding: 40px 30px;
+            background-attachment: fixed;
+            background-position: center;
+            background-size: cover;
+            transition: all 0.2s;
+        }
+
+        /* 대화 라인 기본 구조 및 호버 제어 */
+        .chat-line { position: relative; display: flex; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .chat-line:hover .line-tools { display: flex; }
+        .line-tools { position: absolute; right: 10px; top: -10px; display: none; gap: 4px; background: var(--surface); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border2); box-shadow: var(--shadow); z-index: 10; }
+        /* 🌟 텍스트에 커서가 들어가 있는 동안(편집 중)에는 범용 버튼 대신 합치기/분리 버튼만
+           보이게 한다 — 마우스 오버가 아니라 실제 편집 포커스 여부로 판단한다. */
+        .edit-tools { position: absolute; right: 10px; top: -10px; display: none; gap: 4px; background: var(--surface); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border2); box-shadow: var(--shadow); z-index: 10; }
+        .chat-line.editing-mode .line-tools { display: none !important; }
+        .chat-line.editing-mode .edit-tools { display: flex; }
+        .line-tools button, .edit-tools button {
+            font-size: 11px; font-weight: 600; padding: 3px 8px; border: none; border-radius: 5px;
+            background: var(--surface2); color: var(--text); cursor: pointer;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        .line-tools button svg, .edit-tools button svg { flex-shrink: 0; color: var(--primary); }
+        .line-tools button.btn-danger svg { color: #fff; }
+        .line-tools button:hover, .edit-tools button:hover { background: var(--border); }
+        .line-tools button:disabled, .edit-tools button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .line-tools button:disabled:hover, .edit-tools button:disabled:hover { background: var(--surface2); }
+        /* 🌟 삭제 버튼 — 진한 테라코타 배경 + 흰 글씨로 확실하게 강조 */
+        .line-tools button.btn-danger { background: var(--danger); color: #fff; }
+        .line-tools button.btn-danger:hover { background: var(--danger); opacity: 0.88; }
+
+        /* 프로필 개체 범용 공통 베이스 */
+        .pfp-area { margin-right: 14px; flex-shrink: 0; cursor: pointer; }
+        .pfp-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; }
+        .clickable-name { cursor: pointer; }
+        .clickable-name:hover { text-decoration: underline; }
+
+        /* --- SNS 레이아웃 포맷 스케일 시스템 --- */
+        .size-sm { --base-font: 13px; --pfp-size: 34px; }
+        .size-md { --base-font: 15px; --pfp-size: 42px; }
+        .size-lg { --base-font: 17px; --pfp-size: 48px; }
+
+        .preview-window { font-size: var(--base-font); }
+        .pfp-area { width: var(--pfp-size); height: var(--pfp-size); }
+
+        /* 🌟 프사 이미지가 깨졌을 때 조용히 숨기지 않고 눈에 띄게 표시한다 — "고쳐야 하는구나"를 바로 알아채도록 */
+        .pfp-area.pfp-broken { background: #fdecea !important; border: 2px dashed #e74c3c; }
+        .pfp-area.pfp-broken::after { content: "⚠"; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #e74c3c; font-size: 14px; }
+
+        .pfp-circle { border-radius: 50%; overflow: hidden; }
+        .pfp-square { border-radius: 0%; overflow: hidden; }
+        .pfp-round-square { border-radius: 20%; overflow: hidden; }
+        .pfp-none { display: none !important; }
+
+        /* Twitter 스타일 */
+        .layout-twitter .chat-line { flex-direction: row; align-items: flex-start; }
+        .layout-twitter .meta-info { display: flex; gap: 6px; margin-bottom: 2px; align-items: center; }
+        .layout-twitter .char-name { font-weight: 700; color: var(--text); }
+        .layout-twitter .char-id { color: var(--text2); font-size: 0.95em; }
+        .layout-twitter .char-time { color: var(--text2); font-size: 0.95em; }
+        .layout-twitter .char-time::before { content: "· "; margin-right: 4px; }
+
+        /* Mastodon 스타일 */
+        .layout-mastodon .chat-line { flex-direction: row; align-items: flex-start; }
+        .layout-mastodon .meta-info { display: flex; flex-direction: column; margin-bottom: 4px; position: relative; width: 100%; }
+        .layout-mastodon .char-name { font-weight: 700; color: var(--text); }
+        .layout-mastodon .char-id { color: var(--text3); font-size: 0.9em; }
+        .layout-mastodon .char-time { position: absolute; right: 0; top: 0; color: var(--text3); font-size: 0.9em; }
+
+        /* Discord 스타일 */
+        .layout-discord .chat-line { flex-direction: row; align-items: flex-start; padding: 10px 0; border-bottom: none; }
+        .layout-discord .meta-info { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
+        .layout-discord .char-name { font-weight: 600; color: var(--text); }
+        .layout-discord .char-id { display: none; }
+        .layout-discord .char-time { color: var(--text3); font-size: 0.75em; }
+
+        /* 카카오톡 스타일 — 색상은 라이트/다크 테마 변수를 그대로 쓰고, 말풍선+아바타 배치만 카톡식으로.
+           본인(이름이 정확히 "나"인 경우)은 말풍선이 오른쪽에 뜨고 프로필 사진이 표시되지 않는다. */
+        .layout-kakao .chat-line { flex-direction: row; align-items: flex-start; gap: 8px; padding: 4px 0; border-bottom: none; }
+        .layout-kakao .chat-line.is-mine { flex-direction: row-reverse; }
+        .layout-kakao .chat-line.is-mine .pfp-area { display: none; }
+        .layout-kakao .content-wrap { display: flex; flex-direction: column; align-items: flex-start; flex: 0 1 auto !important; max-width: 72%; position: relative; }
+        .layout-kakao .chat-line.is-mine .content-wrap { align-items: flex-end; }
+        .layout-kakao .meta-info { display: flex; margin-bottom: 4px; }
+        /* display:none이면 이름 칸이 차지하던 공백까지 같이 사라지므로, 자리는 남기고 내용만 숨김 */
+        .layout-kakao .chat-line.is-mine .meta-info { visibility: hidden; }
+        .layout-kakao .char-name { font-weight: 600; font-size: 0.85em; color: var(--text2); }
+        .layout-kakao .char-id { display: none; }
+        .layout-kakao .char-content {
+            display: inline-block; width: auto; text-align: left; white-space: pre-wrap;
+            background: var(--surface2); border-radius: 4px 16px 16px 16px; padding: 10px 14px;
+        }
+        .layout-kakao .chat-line.is-mine .char-content { background: var(--primary); color: #fff; border-radius: 16px 4px 16px 16px; }
+        /* 엔터로 여러 말풍선이 이어붙을 때 사이 간격 */
+        .layout-kakao .char-content + .char-content { margin-top: 4px; }
+        .layout-kakao .char-time {
+            position: absolute; bottom: 2px; font-size: 10.5px; color: var(--text3); white-space: nowrap;
+            visibility: visible; /* meta-info가 visibility:hidden이어도 시간은 보이도록 명시적으로 되돌림 */
+        }
+        .layout-kakao .chat-line:not(.is-mine) .char-time { left: calc(100% + 8px); }
+        .layout-kakao .chat-line.is-mine .char-time { right: calc(100% + 8px); }
+
+
+        /* 본문 영역 시작 정렬선 맞춤 일치화 */
+        .char-content { outline: none; white-space: pre-wrap; word-break: break-all; width: 100%; color: var(--text); line-height: 1.5; text-align: justify; letter-spacing: -0.01em; border: 1.5px solid transparent; padding: 2px 0px; border-radius: 4px; transition: all 0.1s; }
+        .char-content:focus { background-color: rgba(0, 0, 0, 0.02); border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); padding: 2px 6px; margin-left: -6px; }
+        body[data-theme="dark"] .char-content:focus { background-color: rgba(255, 255, 255, 0.03); }
+
+        /* 모달 팝업 레이아웃 */
+        #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 100; align-items: center; justify-content: center; }
+        #overlay.show { display: flex; }
+        .cl-modal { background: var(--surface); border-radius: var(--lg-radius, 16px); padding: 24px; width: 320px; box-shadow: var(--shadow-lg); border: 1px solid var(--border); }
+        .cl-modal h4 { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+        .cl-modal label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 4px; margin-top: 10px; }
+        .cl-modal input { width: 100%; font-size: 13.5px; padding: 8px 12px; border: 1.5px solid var(--border2); border-radius: var(--radius-md); background: var(--surface); color: var(--text); outline: none; transition: border-color 0.15s; }
+        .cl-modal input:focus { border-color: var(--primary); }
+        .modal-btns { display: flex; gap: 8px; margin-top: 20px; }
+        .modal-btns button { flex: 1; font-size: 12.5px; font-weight: 600; padding: 9px; border-radius: var(--radius-md); cursor: pointer; border: 1.5px solid var(--border2); background: transparent; color: var(--text2); }
+        .modal-btns button#modal-save { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .modal-btns button#modal-del { background: #f3e4e1; color: var(--danger); border-color: #d9b3ab; }
+
+        /* 🌟 구간 선택 중에는 본문이 편집 대상이 되면 안 된다 — 실수로 텍스트를 클릭하면 커서가
+           들어가면서 editing-mode가 붙어 합치기/분리 버튼이 뜨고, 그 버튼을 잘못 눌러 구간 선택이
+           엉킨다. 선택 중에는 편집 영역 클릭과 행 버튼을 모두 막는다(클릭은 행으로 그대로 통과). */
+        .preview-window.capture-picking .char-content { pointer-events: none; user-select: none; }
+        .preview-window.capture-picking .line-tools,
+        .preview-window.capture-picking .edit-tools { display: none !important; }
+
+        /* 범위 지정 하이라이터: 둥근 모서리의 인셋 점선 프레임으로 선택 구간을 부드럽게 표시 */
+        .chat-line.cap-target {
+            background-color: rgba(94, 124, 138, 0.08) !important;
+            outline: 2px dashed var(--primary);
+            outline-offset: -6px;
+            border-radius: 10px;
+            transition: background-color 0.15s ease;
+        }
+        
+        /* 알림 배너 */
+        #hint-banner { text-align: center; font-size: 12px; color: var(--text2); background: var(--surface2); padding: 8px; border-radius: var(--radius-md); margin-bottom: 15px; border: 1px solid var(--border); display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- 0) 상단 사이트 이동 바 -->
+    <div class="top-nav">
+        <a class="top-nav-brand" href="index.html">🧵 타래 저장소</a>
+        <div class="top-nav-right">
+            <a class="nav-btn" href="extractor.html">타래 뽑기</a>
+            <span class="nav-btn current">타래 엮기</span>
+        </div>
+    </div>
+
+    <div class="app-body">
+
+    <!-- 1) 왼쪽 편집 기능 사이드바 -->
+    <div class="sidebar-left">
+        <div class="scrollable">
+            <h3><span class="ico">⚙️</span> 컨트롤 패널</h3>
+            <hr style="border: none; border-top: 1px solid var(--border); margin-bottom: 15px;">
+
+            <div class="control-group">
+                <label>파일 불러오기</label>
+                <label class="file-label" for="csvFile"><span class="ico">📁</span> 저장했던 타래(CSV) 불러오기</label>
+                <input type="file" id="csvFile" accept=".csv">
+            </div>
+
+            <div class="control-group">
+                <label>레이아웃 스타일</label>
+                <div class="btn-group" data-id="layoutSelect">
+                    <button class="toggle-btn active" data-val="twitter">트위터</button>
+                    <button class="toggle-btn" data-val="mastodon">마스토돈</button>
+                    <button class="toggle-btn" data-val="discord">디스코드</button>
+                    <button class="toggle-btn" data-val="kakao">카카오톡</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>테마 설정</label>
+                <div class="btn-group" data-id="themeSelect">
+                    <button class="toggle-btn active" data-val="light">라이트모드</button>
+                    <button class="toggle-btn" data-val="dark">다크모드</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>크기 설정</label>
+                <div class="btn-group" data-id="sizeSelect">
+                    <button class="toggle-btn" data-val="size-sm">작게</button>
+                    <button class="toggle-btn active" data-val="size-md">보통</button>
+                    <button class="toggle-btn" data-val="size-lg">크게</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>프로필 이미지 형태</label>
+                <div class="btn-group" data-id="pfpShapeSelect">
+                    <button class="toggle-btn active" data-val="pfp-circle">원형</button>
+                    <button class="toggle-btn" data-val="pfp-square">사각형</button>
+                    <button class="toggle-btn" data-val="pfp-round-square">둥근 사각</button>
+                    <button class="toggle-btn" data-val="pfp-none">생략</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>아이디 표기</label>
+                <div class="btn-group" data-id="mentionIdSelect">
+                    <button class="toggle-btn active" data-val="show">표시하기</button>
+                    <button class="toggle-btn" data-val="hide">숨기기</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>타임스탬프 표기</label>
+                <div class="btn-group" data-id="timeFormatSelect">
+                    <button class="toggle-btn" data-val="full">전체</button>
+                    <button class="toggle-btn active" data-val="date">날짜</button>
+                    <button class="toggle-btn" data-val="time">시간</button>
+                    <button class="toggle-btn" data-val="none">생략</button>
+                </div>
+            </div>
+
+            <!-- 인물 요약 관리 카드 그리드 -->
+            <div class="profile-grid-box">
+                <h3><span class="ico">👥</span> 등장인물 프로필 설정</h3>
+                <div class="pfp-grid" id="profileGrid">
+                    <button class="pfp-grid-item pfp-add-btn" onclick="openProfileModal(null)">＋</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2) 가운데 미리보기 영역 -->
+    <div class="preview-container">
+        <div id="previewWindow" class="preview-window layout-twitter size-md">
+            <div id="chatFlow">
+                <p style="text-align:center; color:var(--text3); margin-top:80px; font-size:13.5px; line-height: 1.7;">
+                    왼쪽 사이드바에서 타래(CSV) 파일을 불러와주세요.<br>
+                    <b>[이름, 아이디, 타임스탬프(선택), 본문, 프로필이미지(선택)]</b> 구조를 자동으로 인식합니다.
+                </p>
+                <div style="text-align:center; margin-top:16px;">
+                    <button class="core-btn" style="display:inline-flex; padding:8px 16px;" onclick="loadSampleCsv()">📄 샘플 불러보기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3) 오른쪽 가이드 사이드바 -->
+    <div class="sidebar-right">
+        <div class="scrollable">
+            <h3><span class="ico">📖</span> 사용 방법 가이드</h3>
+            <div style="font-size:12px; line-height:1.7; color:var(--text2); margin-top:15px; margin-bottom: 20px;">
+                • <b>실시간 편집:</b> 대사 본문을 클릭하면 테두리가 나타나며 글자 편집이 가능합니다. 외부 빈 곳을 클릭하면 다시 깔끔하게 정돈됩니다.<br><br>
+                • <b>인물 연동 교체:</b> 미리보기 창의 [프로필 사진]이나 [이름] 영역을 클릭하면 지정 인물로 한 번에 변경 가능합니다.<br><br>
+                • <b>행 합치기 / 분리:</b> 대사 칸을 클릭해 편집 상태가 되면 우측 도구가 [윗 행에 합치기]·[커서에서 분리]로 바뀌어요. 합치기는 바로 위 대사와 이어붙이고, 분리는 커서 위치를 기준으로 두 줄로 나눠요.<br><br>
+                • <b>카카오톡 레이아웃:</b> 등장인물 프로필 설정에서 본인에 해당하는 인물의 <b>이름을 정확히 "나"로</b> 지정해야 오른쪽 말풍선(프로필 사진 없음)으로 표시됩니다. 다른 인물은 전부 왼쪽 말풍선으로 나옵니다. 대사에 줄바꿈이 있으면 말풍선이 여러 개로 이어붙어요.<br><br>
+                • <b>아이디 표기:</b> 이름 옆에 뜨는 아이디(@계정명)를 표시할지 숨길지 선택할 수 있어요. 트위터·마스토돈 레이아웃에 적용돼요 (디스코드·카카오톡은 원래부터 아이디를 표시하지 않아요).<br><br>
+                • <b>부분 스크린샷:</b> 구간 캡쳐 활성화 후 원하는 타깃 시작 행과 끝 행을 연달아 선택하면 깔끔한 크롭 캡쳐가 완료됩니다.
+            </div>
+            <div id="hint-banner">구간 지정 상태: 시작 대화 라인을 선택하세요.</div>
+        </div>
+
+        <div class="action-box">
+            <div style="background: var(--surface2); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 7px;">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px;">내보내기 / 저장</label>
+                <button class="core-btn" id="btnExportHtml">🌐 웹 문서 형태로 보관하기 (HTML)</button>
+                <div style="display:flex; gap:6px;">
+                    <button class="core-btn" id="btnExportImg" style="flex:1;">전체 화면 캡쳐</button>
+                    <button class="core-btn" id="btnCapRange" style="flex:1;">구간 선택 캡쳐</button>
+                </div>
+                <!-- 🌟 CSV 다시 저장을 제일 하단으로 + 강조(primary) -->
+                <button class="core-btn primary-action" id="btnExportCsv">💾 편집된 타래(CSV) 다시 저장</button>
+            </div>
+
+            <div style="background: var(--surface2); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 7px;">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px;">작업 관리</label>
+                <div class="action-segment">
+                    <button class="seg-btn" id="btnSaveStorage">현재 작업 저장</button>
+                    <button class="seg-btn" id="btnLoadStorage">최근 불러오기</button>
+                </div>
+                <div class="action-segment action-segment-warn">
+                    <button class="seg-btn" id="btnResetContent">내용 초기화</button>
+                    <button class="seg-btn" id="btnResetConfig">설정 초기화</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div><!-- /.app-body -->
+
+    <!-- ── 편집/삭제 모달 오버레이 ── -->
+    <div id="overlay">
+        <div class="cl-modal">
+            <h4 id="modalTitle">캐릭터 프로필 상세 설정</h4>
+            
+            <label>이름</label>
+            <input type="text" id="mCharName" placeholder="예: 홍길동">
+            
+            <label>고유 아이디 (@ 제외)</label>
+            <input type="text" id="mCharId" placeholder="예: hong_gildong">
+            
+            <label>프로필 이미지 링크 URL</label>
+            <p style="font-size:11px; color:var(--text3); line-height:1.5; margin-top:2px;">⚠️ 원본 이미지 링크에 문제가 있을 시 이미지가 깨집니다. 오류 발생 시 이미지 링크(추천:imgur)를 변경하거나 비워주세요.</p>
+            <input type="text" id="mCharPfp" placeholder="https://... 형식을 입력하세요">
+            
+            <label>프로필 이미지 링크 없을 시</label>
+            <div class="btn-group" data-id="mCharPfpModeSelect" style="margin-bottom:6px;">
+                <button type="button" class="toggle-btn active" data-val="color">색만 표시</button>
+                <button type="button" class="toggle-btn" data-val="omit">생략</button>
+            </div>
+            <div id="mCharColorRow">
+                <input type="text" id="mCharColor" placeholder="예: #1abc9c">
+            </div>
+            
+            <div class="modal-btns">
+                <button id="modal-del">인물 삭제</button>
+                <button id="modal-cancel">취소</button>
+                <button id="modal-save">변경 저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 인물 교체 매핑 선택 팝업 레이어 -->
+    <div id="overlayPicker" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.15); z-index:90; align-items:center; justify-content:center;">
+        <div class="cl-modal" style="width:280px; max-height:400px; overflow-y:auto;">
+            <h4>변환 대상 캐릭터 선택</h4>
+            <div id="pickerList" style="display:flex; flex-direction:column; gap:6px;"></div>
+            <button class="core-btn" style="margin-top:15px; width:100%;" onclick="document.getElementById('overlayPicker').style.display='none'">닫기</button>
+        </div>
+    </div>
+
+    <script>
+        let chatData = [];
+        let profiles = {}; 
+        let captureMode = false;
+        let captureStartIdx = null;
+        let activeEditName = null;
+        let lineChangeTargetIdx = null;
+
+        const colors = ['#7894A1', '#CC8C76', '#91A585', '#D3B17D', '#A08AA9', '#89AFA9', '#BCA790', '#C0989C'];
+        const imgBase64Cache = {};
+
+        async function fetchImageAsBase64(url) {
+            // 성공한 주소와 실패한 주소(값 null)를 모두 기억한다. null은 falsy라 값이 아니라 키 존재
+            // (`in`)로 판단해야, 못 불러오는 링크를 캡처할 때마다 다시 요청하지 않는다.
+            if (url in imgBase64Cache) return imgBase64Cache[url];
+            const blobToDataURL = (blob) => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+            const cacheBustUrl = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+            try {
+                const res = await fetch(cacheBustUrl, { mode: 'cors', cache: 'no-store' });
+                if (!res.ok) throw new Error(`direct fetch HTTP ${res.status}`);
+                const dataUrl = await blobToDataURL(await res.blob());
+                imgBase64Cache[url] = dataUrl;
+                return dataUrl;
+            } catch (e) {
+                // 직접 CORS fetch가 실패하면 포기한다(그 이미지는 캡처에서 빈칸으로 남는다).
+                imgBase64Cache[url] = null;
+                return null;
+            }
+        }
+
+        // 🌟 html2canvas는 대상 요소만 그리는 게 아니라 "문서 전체"를 iframe으로 복제한 뒤,
+        // 그 iframe의 load 이벤트(=복제본 안 모든 이미지 로딩 완료)를 기다린 다음에야 그리기를
+        // 시작한다. 그래서 화면 밖 복제본 몇 줄만 캡쳐해도 살아있는 로그 전체(모든 행 + 행마다
+        // 붙은 편집 버튼/SVG + 모든 프사)가 통째로 복제되고 이미지가 전부 다시 로딩된다 —
+        // 선택 구간이 아무리 짧아도 로그가 길수록 느려지는 원인. 미리보기 프레임은 캡쳐 대상이
+        // 아니므로 복제 단계에서 통째로 건너뛴다.
+        const CAPTURE_H2C_OPTS = {
+            useCORS: true,
+            allowTaint: false,
+            // 🌟 scale을 1로 고정한다. 이 옵션을 안 주면 html2canvas가 화면 배율
+            // (devicePixelRatio — 레티나 2, 윈도우 150% 설정이면 1.5)을 그대로 곱해서 그린다.
+            // 그러면 11,000px짜리 청크가 레티나에서 22,000px 캔버스가 되는데, 브라우저 한계가
+            // 약 16,384px이라 조용히 빈 그림이 나온다(= 0KB, 안 열리는 파일). 픽셀 수도 4배라
+            // 그리기·저장 시간이 그만큼 늘어난다. 1로 고정하면 어느 기기에서 뽑든 결과 크기가
+            // 화면에 보이는 크기 그대로여서, 위 청크 상한(SAFE_CHUNK_HEIGHT)이 실제로 유효해진다.
+            scale: 1,
+            ignoreElements: (el) => el === previewWindow
+        };
+
+        // 캔버스를 PNG 파일로 저장한다. toDataURL()과 달리 거대한 base64 문자열을 거치지 않아
+
+        // 메모리와 대기 시간이 적다. (캡처 전 외부 이미지를 base64로 바꾸는 fetchImageAsBase64는
+
+        // 캔버스 오염 방지용으로, 이것과는 별개다.)
+        function canvasToBlob(canvas) {
+            return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        }
+
+        async function downloadCanvas(canvas, filename) {
+            const blob = await canvasToBlob(canvas);
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = url;
+            link.click();
+            // 다운로드가 시작되기 전에 해제하면 취소될 수 있어 잠깐 뒤에 정리한다.
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        async function prepareImagesForCapture(container) {
+            const imgs = Array.from(container.querySelectorAll('img'));
+            const targets = imgs.filter(img => img.src.startsWith('http'));
+            const uniqueSrcs = [...new Set(targets.map(img => img.src))];
+            await Promise.all(uniqueSrcs.map(src => fetchImageAsBase64(src)));
+            targets.forEach(img => {
+                const converted = imgBase64Cache[img.src];
+                if (converted) img.src = converted;
+            });
+        }
+
+        function normalizeImgUrl(url) {
+            if (!url) return "";
+            try {
+                const u = new URL(url);
+                if (u.hostname === 'imgur.com') {
+                    let path = u.pathname.replace(/^\/+/, '');
+                    if (!path || path.startsWith('a/') || path.startsWith('gallery/')) return url;
+                    if (!/\.\w{3,4}$/.test(path)) path += '.png';
+                    return `https://i.imgur.com/${path}`;
+                }
+            } catch (e) {}
+            return url;
+        }
+
+        function rfcParseCSV(text) {
+            let p = '', c = '', r = [];
+            let q = false;
+            let row = [''];
+            for (let i=0; i<text.length; i++) {
+                c = text[i];
+                let next = text[i+1];
+                if (!q && (c === '\r' || c === '\n')) {
+                    if (c === '\r' && next === '\n') { i++; }
+                    r.push(row);
+                    row = [''];
+                    continue;
+                }
+                if (c === '"') {
+                    if (q && next === '"') { row[row.length-1] += '"'; i++; }
+                    else { q = !q; }
+                    continue;
+                }
+                if (c === ',' && !q) {
+                    row.push('');
+                    continue;
+                }
+                row[row.length-1] += c;
+            }
+            if (row.length > 1 || row[0] !== '') r.push(row);
+            return r;
+        }
+
+        const csvFileInput = document.getElementById('csvFile');
+        const chatFlow = document.getElementById('chatFlow');
+        const previewWindow = document.getElementById('previewWindow');
+        const profileGrid = document.getElementById('profileGrid');
+        const overlay = document.getElementById('overlay');
+
+        // 권장 행 수 — 이보다 길면 로드 시 CSV 디바이더로 먼저 쪼개길 안내한다 (가상 스크롤은
+        // 스크롤이 화면을 못 따라오는 문제가 있어 보류하고, 대신 이 상한선을 두는 쪽을 택함).
+        const RECOMMENDED_MAX_ROWS = 2000;
+
+
+        // 🌟 CSV 파일 읽기 확장 장치 (5번째 열 프로필 직연동 파서 업데이트)
+        csvFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                processCsvText(evt.target.result);
+            };
+            reader.readAsText(file, 'UTF-8');
+        });
+
+        // 🌟 CSV 텍스트 하나를 chatData/profiles로 채워 넣는 공용 처리 로직.
+        // 파일 업로드(위)와 샘플 CSV 불러오기(아래) 둘 다 이 함수 하나를 그대로 재사용한다.
+        function processCsvText(text) {
+            const rows = rfcParseCSV(text);
+            chatData = [];
+            profiles = {};
+            let colorCounter = 0;
+
+            rows.forEach((row, index) => {
+                if (index === 0 && (row[0]||'').includes('이름')) return;
+                if (row.length < 3) return; // 최소 이름/아이디/대사 세 칸은 있어야 처리 가능
+
+                const name = (row[0]||'').trim();
+
+                // 🌟 통일 예외코드: 이름 칸이 __EXC__ 인 행은 기본판이 렌더링할 수 없는 특수 행
+                // (이미지/HTML 블럭 등)이라 무조건 건너뛴다. 구체적으로 어떤 예외인지는 아이디 칸에
+                // 담겨오지만(예: "img", "html", "img|업로더"), 기본판은 종류와 상관없이 전부 스킵한다.
+                if (name === '__EXC__') return;
+
+                // 타래 디바이더의 "구분자 포함 통합 CSV"가 챕터 경계에 남기는 표시 행
+                // (예: "───── 챕터 2 시작 ─────")도 대화가 아니므로 조용히 건너뛴다.
+                if (name.startsWith('─')) return;
+
+                if (!name) return;
+                const id = (row[1]||'').trim();
+
+                let time, content, pfpRaw;
+                if (row.length >= 4) {
+                    // 기존 구조: 이름,아이디,타임스탬프,본문,(프로필이미지)
+                    time = (row[2]||'').trim();
+                    content = row[3] || '';
+                    pfpRaw = row.length >= 5 ? row[4] : '';
+                } else {
+                    // 타임스탬프 열 자체가 없는 3열 구조: 이름,아이디,대사
+                    time = '';
+                    content = row[2] || '';
+                    pfpRaw = '';
+                }
+                // 🌟 기본판은 HTML을 지원하지 않으므로, 본문에 섞인 태그는 읽을 수 있는 텍스트로만
+                // 환원한다(<img>는 [이미지]로 치환). _desc_ 같은 인물은 특별 취급 없이 일반 대사로 남는다.
+                content = htmlToPlainText(content);
+                // 5번째(또는 해당) 열에 프로필 링크가 기록되어 있다면 복구 처리, 비어있다면 공백 설정
+                const pfpLink = pfpRaw ? normalizeImgUrl(pfpRaw.trim()) : "";
+
+                chatData.push({ name, time, content });
+
+                // 이미 등록된 유저여도, 주소값이 뒤늦게 나오면 지속적으로 보정 패치
+                if (!profiles[name]) {
+                    const assignedColor = colors[colorCounter % colors.length];
+                    profiles[name] = { id: id, pfp: pfpLink, color: assignedColor };
+                    colorCounter++;
+                } else if (pfpLink && !profiles[name].pfp) {
+                    profiles[name].pfp = pfpLink;
+                }
+            });
+            renderProfiles();
+            renderChat();
+            if (chatData.length > RECOMMENDED_MAX_ROWS) {
+                alert(`⚠️ 이 CSV는 ${chatData.length.toLocaleString()}행이에요.\n\n2000행을 넘어가면 편집(호버 버튼, 레이아웃 전환 등)이 버벅일 수 있어요. CSV 디바이더로 챕터 단위로 먼저 나눠서 각각 불러오는 걸 권장해요.`);
+            }
+        }
+
+        // 🌟 샘플 CSV — 중앙 안내 문구 밑 버튼에서 호출. 실제 파일을 별도로 안 두고 텍스트를
+        // 그대로 내장해서, 파일 선택 없이 버튼 한 번으로 바로 채워 넣는다.
+        const SAMPLE_CSV_TEXT = `이름,아이디,타임스탬프,본문,프로필이미지
+타래,tarae,2026. 7. 15 오전 12:00:00,"안녕하세요. 이 사이트는 트위터, 마스토돈, 디스코드, 카카오톡 등
+다양한 플랫폼에서의 대화를 
+보기 좋은 형태로 가공하기 위해 제작되었습니다.",https://i.imgur.com/K62uPwN.png
+타래,tarae,2026. 7. 15 오전 12:00:01,"기본적으로 타래 뽑기 사이트에서 자동 CSV 제작을 지원하지만
+익숙하지 않다면 본 타래 엮기 사이트에서 
+샘플에 직접 인물과 대사를 추가하고 저장할 수 있습니다.",https://i.imgur.com/K62uPwN.png
+타래,tarae,2026. 7. 15 오전 12:00:02,"대화의 레이아웃 스타일(트위터→카카오톡 등)을 바꿔 보거나
+원하는 대사에 마우스를 올려 직접 간단한 편집도 가능합니다.",https://i.imgur.com/K62uPwN.png
+타래,tarae,2026. 7. 15 오전 12:00:02,"모든 데이터는 브라우저 내에서만 가공되며 
+별도 서버에 전송되지 않습니다.",https://i.imgur.com/K62uPwN.png
+타래,tarae,2026. 7. 15 오전 12:00:03,CSV는 활용방법이 무궁무진한 템플릿입니다.,https://i.imgur.com/K62uPwN.png
+타래,tarae,2026. 7. 15 오전 12:00:04,"소중한 대화의 기억을 보기 좋게 남기고 보관하는 데 
+이 타래 저장소 사이트가 도움되기를 바랍니다.",https://i.imgur.com/K62uPwN.png`;
+
+        window.loadSampleCsv = function() {
+            processCsvText(SAMPLE_CSV_TEXT);
+            showToast('샘플 대화를 불러왔어요');
+        };
+
+        function renderProfiles() {
+            profileGrid.innerHTML = "";
+            Object.keys(profiles).forEach(name => {
+                const item = profiles[name];
+                const div = document.createElement('div');
+                div.className = 'pfp-grid-item';
+                div.title = `${name} (@${item.id})`;
+                
+                if (item.pfp) {
+                    div.innerHTML = `<img src="${item.pfp}">`;
+                } else {
+                    const first = name.charAt(0);
+                    div.innerText = first;
+                    div.style.backgroundColor = item.color || '#718096';
+                }
+                
+                div.onclick = () => openProfileModal(name);
+                profileGrid.appendChild(div);
+            });
+
+            const addBtn = document.createElement('button');
+            addBtn.className = 'pfp-grid-item pfp-add-btn';
+            addBtn.innerText = '＋';
+            addBtn.onclick = () => openProfileModal(null);
+            profileGrid.appendChild(addBtn);
+        }
+
+        function formatTimestamp(rawStr, option) {
+            if (option === 'none' || !rawStr) return '';
+
+            // 🌟 ISO 8601(타임존 없음, 예: "2026-06-30T21:35:00")을 우선 시도한다 — 새 추출기들이
+            // 이 형식으로 저장한다. 실패하면(이미 배포된 CSV 호환) 기존
+            // 한국어 로케일 형식("2026. 6. 30. 오후 9:35") 정규식으로 폴백한다.
+            const isoMatch = rawStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/);
+            if (isoMatch) {
+                const h = parseInt(isoMatch[4], 10);
+                const ampm = h < 12 ? '오전' : '오후';
+                const h12 = h % 12 === 0 ? 12 : h % 12;
+                const datePart = `${isoMatch[1]}. ${parseInt(isoMatch[2], 10)}. ${parseInt(isoMatch[3], 10)}.`;
+                const timePart = `${ampm} ${h12}:${isoMatch[5]}`;
+                if (option === 'date') return datePart;
+                if (option === 'time') return timePart;
+                return `${datePart} ${timePart}`;
+            }
+
+            const dateRegex = /(\d{4}\.\s*\d{1,2}\.\s*\d{1,2})/;
+            const timeRegex = /((오전|오후)\s*\d{1,2}:\d{2}(:\d{2})?)/;
+            const dateMatch = rawStr.match(dateRegex);
+            const timeMatch = rawStr.match(timeRegex);
+            const datePart = dateMatch ? dateMatch[1].trim() : rawStr;
+            const timePart = timeMatch ? timeMatch[1].trim() : rawStr;
+            if (option === 'date') return datePart;
+            if (option === 'time') return timePart;
+            return `${datePart} ${timePart}`;
+        }
+
+        // 🌟 본문에 특수문자(<, >, &)가 섞여 있어도 태그로 오인되지 않게 텍스트로 이스케이프한다.
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // 🌟 [기본판 전용] 본문에 섞여 들어온 HTML을 "읽을 수 있는 텍스트"로만 환원한다.
+        // 기본판은 롤꾸(인라인 HTML)나 이미지 삽입을 지원하지 않으므로, <img>는 [이미지]라는
+        // 글자로 치환하고 나머지 태그는 전부 벗겨 안쪽 텍스트만 남긴다. (확장판/롤20은 HTML을 그대로 살림)
+        function htmlToPlainText(str) {
+            if (!str) return '';
+            if (!/<[a-z!/][^>]*>/i.test(str)) return str; // HTML 태그가 없으면 원본 그대로
+            // DOMParser는 비활성(inert) 문서를 만들어 <img> 등의 리소스를 실제로 불러오지 않는다.
+            const doc = new DOMParser().parseFromString(str, 'text/html');
+            doc.querySelectorAll('img').forEach(img => img.replaceWith(doc.createTextNode('[이미지]')));
+            return (doc.body.textContent || '').replace(/\u00a0/g, ' ').trim();
+        }
+
+        // 🌟 line-tools/edit-tools 버튼 아이콘 — 전부 같은 스타일의 단색 SVG로 통일했다.
+        // currentColor를 쓰기 때문에 버튼 글자색과 항상 같은 색으로 맞춰진다.
+        const ICONS = {
+            plus: '<svg viewBox="0 0 20 20" width="13" height="13"><rect x="8.3" y="3" width="3.4" height="14" rx="1.7" fill="currentColor"/><rect x="3" y="8.3" width="14" height="3.4" rx="1.7" fill="currentColor"/></svg>',
+            up: '<svg viewBox="0 0 20 20" width="13" height="13"><path d="M10 3.3l6.1 6.5a1 1 0 0 1-.73 1.7H12.3v4.3a1 1 0 0 1-1 1H8.7a1 1 0 0 1-1-1V11.5H4.63a1 1 0 0 1-.73-1.7z" fill="currentColor"/></svg>',
+            down: '<svg viewBox="0 0 20 20" width="13" height="13"><path d="M10 16.7l-6.1-6.5a1 1 0 0 1 .73-1.7H7.7V3.9a1 1 0 0 1 1-1h2.6a1 1 0 0 1 1 1v4.4h3.07a1 1 0 0 1 .73 1.7z" fill="currentColor"/></svg>',
+            trash: '<svg viewBox="0 0 20 20" width="13" height="13"><rect x="8" y="2.3" width="4" height="2.3" rx="1.1" fill="currentColor"/><rect x="3.8" y="5.3" width="12.4" height="2" rx="1" fill="currentColor"/><path d="M5.3 8.3h9.4l-.8 7.6a1.6 1.6 0 0 1-1.6 1.4H7.7a1.6 1.6 0 0 1-1.6-1.4z" fill="currentColor" fill-opacity="0.8"/></svg>',
+            merge: '<svg viewBox="0 0 20 20" width="13" height="13"><path d="M4.8 2.4a1.2 1.2 0 0 1 1.2 1.2v4.7a2.7 2.7 0 0 0 2.7 2.7h3.7V9.5a.8.8 0 0 1 1.3-.63l3 2.5a.8.8 0 0 1 0 1.26l-3 2.5a.8.8 0 0 1-1.3-.63V12.5H8.7a4.2 4.2 0 0 1-4.2-4.2V3.6a1.2 1.2 0 0 1 .3-1.2z" fill="currentColor"/></svg>',
+            split: '<svg viewBox="0 0 20 20" width="13" height="13"><path d="M10 2.2a1 1 0 0 1 1 1v4.2l1.9-1.6a.8.8 0 0 1 1.3.6v3.5a.8.8 0 0 1-1.3.6L11 8.9v1.4a2.7 2.7 0 0 1-2.7 2.7H6v2.6a1 1 0 1 1-2 0v-3.5a1 1 0 0 1 1-1h3.3a.7.7 0 0 0 .7-.7V3.2a1 1 0 0 1 1-1z" fill="currentColor" fill-opacity="0.85"/></svg>'
+        };
+
+        // 🌟 모든 행에 공통으로 붙는 범용 버튼(우측). 기본판은 이미지가 없으므로 대사/위로/아래로/삭제만.
+        // 합치기/분리는 편집(포커스) 중에만 나오는 edit-tools로 따로 뺐다.
+        function universalLineToolsHtml(index) {
+            return `
+                <button data-action="insertLine" data-index="${index}">${ICONS.plus} 대사</button>
+                <button data-action="moveRowUp" data-index="${index}" ${index === 0 ? 'disabled' : ''}>${ICONS.up} 위로</button>
+                <button data-action="moveRowDown" data-index="${index}" ${index === chatData.length - 1 ? 'disabled' : ''}>${ICONS.down} 아래로</button>
+                <button class="btn-danger" data-action="deleteLine" data-index="${index}">${ICONS.trash} 삭제</button>
+            `;
+        }
+
+        // 🌟 [최적화] 행 하나를 실제로 만드는 로직을 별도 함수로 뽑아냈다. 가상 스크롤 미리보기에서도,
+        // 전체 화면 캡쳐/HTML 내보내기/구간 캡쳐처럼 "화면에 지금 안 보이는 행"까지 포함해서
+        // 통째로 필요한 곳에서도 똑같이 재사용한다. opts.noTools를 주면 호버 버튼 없이 순수하게
+        // 보여주기용으로만 행을 만든다(캡쳐/내보내기 전용).
+        function buildRowElement(item, index, opts = {}) {
+            const includeTools = !opts.noTools;
+
+            const activeShape = document.querySelector('[data-id="pfpShapeSelect"] .active').dataset.val;
+            const activeTimeOpt = document.querySelector('[data-id="timeFormatSelect"] .active').dataset.val;
+            const idDisplayMode = document.querySelector('[data-id="mentionIdSelect"] .active')?.dataset.val || 'show';
+            const activeLayout = document.querySelector('[data-id="layoutSelect"] .active').dataset.val;
+
+            const line = document.createElement('div');
+            line.className = 'chat-line' + (item.name === '나' ? ' is-mine' : '');
+            line.dataset.index = index;
+
+            const prof = profiles[item.name] || { id: "unknown", pfp: "", color: "#718096" };
+            let pfpHTML = '';
+
+            if (activeShape !== 'pfp-none') {
+                if (prof.pfp) {
+                    pfpHTML = `<div class="pfp-area ${activeShape}"><img src="${prof.pfp}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'; this.closest('.pfp-area').classList.add('pfp-broken');"></div>`;
+                } else if (prof.pfpEmptyMode === 'omit') {
+                    // 🌟 "생략" — 자리는 그대로 차지하되 내용만 투명 처리(레이아웃이 밀리지 않음)
+                    pfpHTML = `<div class="pfp-area ${activeShape}" style="visibility:hidden;"></div>`;
+                } else {
+                    const first = item.name ? item.name.charAt(0) : '?';
+                    pfpHTML = `<div class="pfp-area ${activeShape}"><div class="pfp-fallback" style="background-color:${prof.color}">${first}</div></div>`;
+                }
+            }
+
+            const displayTime = formatTimestamp(item.time, activeTimeOpt);
+            // 기본판은 HTML을 렌더링하지 않으므로 본문/이름/아이디를 텍스트로 이스케이프한다.
+            const displayContent = item.content;
+            const charIdHtml = idDisplayMode === 'show' ? `<span class="char-id">@${escapeHtml(prof.id)}</span>` : '';
+
+            let bubblesHtml = '';
+            if (activeLayout === 'kakao' && displayContent.includes('\n')) {
+                const segments = displayContent.split('\n').filter(s => s.trim() !== '');
+                const finalSegments = segments.length > 0 ? segments : [displayContent];
+                bubblesHtml = finalSegments
+                    .map(seg => `<div class="char-content" contenteditable="true">${escapeHtml(seg)}</div>`)
+                    .join('');
+            } else {
+                bubblesHtml = `<div class="char-content" contenteditable="true">${escapeHtml(displayContent)}</div>`;
+            }
+
+            line.innerHTML = `
+                ${pfpHTML}
+                <div class="content-wrap" style="flex:1;">
+                    <div class="meta-info">
+                        <span class="char-name clickable-name">${escapeHtml(item.name)}</span>
+                        ${charIdHtml}
+                        <span class="char-time" style="${(activeTimeOpt === 'none' || !displayTime) ? 'display:none' : ''}">${displayTime}</span>
+                    </div>
+                    ${bubblesHtml}
+                </div>
+                ${includeTools ? `
+                <div class="line-tools">
+                    ${universalLineToolsHtml(index)}
+                </div>
+                <div class="edit-tools">
+                    <button data-action="mergeUp" data-index="${index}" ${index === 0 ? 'disabled' : ''}>${ICONS.merge} 윗 행에 합치기</button>
+                    <button data-action="splitCursor" data-index="${index}">${ICONS.split} 커서에서 분리</button>
+                </div>` : ''}
+            `;
+
+            return line;
+        }
+
+        // 이 에디터는 ~2000행 내외에서 쾌적하도록 유지한다. 그보다 긴 로그는 CSV 디바이더로
+
+        // 먼저 챕터 단위로 쪼갠 뒤 각각 불러오는 걸 권장한다.
+        function renderChat() {
+            if (chatData.length === 0) {
+                chatFlow.innerHTML = `<p style="text-align:center; color:var(--text3); margin-top:80px; font-size:13.5px;">데이터가 비어있습니다.</p>
+                <div style="text-align:center; margin-top:16px;"><button class="core-btn" style="display:inline-flex; padding:8px 16px;" onclick="loadSampleCsv()">📄 샘플 불러보기</button></div>`;
+                return;
+            }
+            chatFlow.innerHTML = "";
+            chatData.forEach((item, index) => {
+                chatFlow.appendChild(buildRowElement(item, index));
+            });
+        }
+
+        // 🌟 [최적화] 이벤트 위임 — 행마다 리스너를 붙이면 renderChat()이 다시 그릴 때마다
+
+        // 전부 재등록해야 한다. 컨테이너(#chatFlow) 하나에만 걸어두고, 버블링되어 올라온
+
+        // 이벤트를 e.target 기준으로 역산해 어떤 행/버튼인지 판단한다.
+
+        let lastHoverLineIdx = null;
+
+        // blur/focus는 원래 버블링을 안 하므로, 버블링되는 focusout/focusin으로 대체해서 위임한다.
+        chatFlow.addEventListener('focusin', function(e) {
+            if (!e.target.classList.contains('char-content')) return;
+            const lineEl = e.target.closest('.chat-line');
+            if (!lineEl) return;
+            lineEl.classList.add('editing-mode'); // 🌟 편집 중엔 합치기/분리 버튼만, 범용 버튼은 숨김
+            const bubbleEls = Array.from(lineEl.querySelectorAll('.char-content'));
+            cacheCaretPositionMulti(lineEl, bubbleEls, e.target);
+        });
+
+        chatFlow.addEventListener('focusout', function(e) {
+            if (!e.target.classList.contains('char-content')) return;
+            const lineEl = e.target.closest('.chat-line');
+            if (!lineEl) return;
+            lineEl.classList.remove('editing-mode');
+            const idx = parseInt(lineEl.dataset.index, 10);
+            if (!chatData[idx]) return;
+            const bubbleEls = Array.from(lineEl.querySelectorAll('.char-content'));
+            chatData[idx].content = bubbleEls.map(b => b.innerText).join('\n');
+        });
+
+        // 🌟 edit-tools 버튼(합치기/분리)을 클릭하면 mousedown 시점에 contenteditable의 포커스가
+        // 먼저 빠져나가면서 focusout이 발동 → editing-mode가 지워져 버튼 자신이 그 즉시
+        // display:none이 되어버리는 경합이 생긴다(클릭이 씹힐 수 있음). mousedown 단계에서
+        // 기본 포커스 이동 자체를 막아서 편집 모드가 유지된 채로 클릭이 끝까지 전달되게 한다.
+        chatFlow.addEventListener('mousedown', function(e) {
+            if (e.target.closest('.edit-tools')) e.preventDefault();
+        });
+
+        chatFlow.addEventListener('mouseup', function(e) {
+            if (!e.target.classList.contains('char-content')) return;
+            const lineEl = e.target.closest('.chat-line');
+            if (!lineEl) return;
+            const bubbleEls = Array.from(lineEl.querySelectorAll('.char-content'));
+            cacheCaretPositionMulti(lineEl, bubbleEls, e.target);
+        });
+
+        chatFlow.addEventListener('keyup', function(e) {
+            if (!e.target.classList.contains('char-content')) return;
+            const lineEl = e.target.closest('.chat-line');
+            if (!lineEl) return;
+            const bubbleEls = Array.from(lineEl.querySelectorAll('.char-content'));
+            cacheCaretPositionMulti(lineEl, bubbleEls, e.target);
+        });
+
+        // mouseenter는 버블링을 안 해서 위임이 안 되므로, 버블링되는 mouseover로 대체하되
+        // 같은 행 안에서 자식 요소끼리 이동할 때마다 반복 실행되지 않도록 마지막 행 인덱스를 캐싱한다.
+        chatFlow.addEventListener('mouseover', function(e) {
+            if (!captureMode) return;
+            const lineEl = e.target.closest('.chat-line');
+            if (!lineEl) return;
+            const idx = parseInt(lineEl.dataset.index, 10);
+            if (idx === lastHoverLineIdx) return;
+            lastHoverLineIdx = idx;
+            if (captureStartIdx === null) highlightCaptureRange(idx, idx);
+            else highlightCaptureRange(captureStartIdx, idx);
+        });
+
+        chatFlow.addEventListener('click', function(e) {
+            const btn = e.target.closest('button[data-action]');
+            if (btn) {
+                const idx = parseInt(btn.dataset.index, 10);
+                switch (btn.dataset.action) {
+                    case 'mergeUp': mergeLineUp(idx); break;
+                    case 'splitCursor': splitLineAtCursor(idx); break;
+                    case 'insertLine': insertLineRow(idx); break;
+                    case 'deleteLine': deleteLineRow(idx); break;
+                    case 'moveRowUp': moveRowUp(idx); break;
+                    case 'moveRowDown': moveRowDown(idx); break;
+                }
+                return;
+            }
+
+            // 구간 선택 중에는 이름/프사를 눌러도 프로필 창이 열리지 않고 그냥 행 선택으로 간다.
+            const nameOrPfp = captureMode ? null : e.target.closest('.clickable-name, .pfp-area');
+            if (nameOrPfp) {
+                const lineEl = nameOrPfp.closest('.chat-line');
+                if (lineEl) openQuickPicker(parseInt(lineEl.dataset.index, 10));
+                return; // 이름/프사 클릭은 구간캡쳐를 트리거하지 않는다 (기존 stopPropagation과 동일한 효과)
+            }
+
+            if (!captureMode) return;
+            const lineEl = e.target.closest('.chat-line');
+            if (lineEl) handleRangeSelect(parseInt(lineEl.dataset.index, 10), lineEl);
+        });
+
+        function highlightCaptureRange(start, current) {
+            const min = Math.min(start, current);
+            const max = Math.max(start, current);
+            // 가상 스크롤 환경에서는 지금 화면에 실제로 그려진 행만 존재하므로,
+            // NodeList 안에서의 순번이 아니라 각 행에 심어둔 dataset.index(=chatData 인덱스)로 판정한다.
+            const lines = chatFlow.querySelectorAll('.chat-line');
+            lines.forEach((el) => {
+                const idx = parseInt(el.dataset.index, 10);
+                if (idx >= min && idx <= max) el.classList.add('cap-target');
+                else el.classList.remove('cap-target');
+            });
+        }
+
+        // 아직 시작점을 고르기 전(미리보기 단계)에 마우스가 미리보기 영역을 완전히 벗어나면
+        // 하이라이트를 지운다. 시작점을 이미 고른 뒤에는 건드리지 않는다(선택 중인 범위 유지).
+        previewWindow.addEventListener('mouseleave', function() {
+            if (captureMode && captureStartIdx === null) {
+                clearCaptureHighlight();
+            }
+            lastHoverLineIdx = null;
+        });
+
+        // 짧게 떴다 자동으로 사라지는 토스트 메시지 (alert()과 달리 직접 닫을 필요 없음)
+        let toastHideTimer = null;
+        function showToast(message) {
+            let toastEl = document.getElementById('captureToast');
+            if (!toastEl) {
+                toastEl = document.createElement('div');
+                toastEl.id = 'captureToast';
+                toastEl.style.cssText = `
+                    position: fixed; top: 22px; left: 50%; z-index: 200; pointer-events: none;
+                    background: rgba(26,25,22,0.92); color: #fff; font-size: 13px; font-weight: 600;
+                    padding: 10px 20px; border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+                    opacity: 0; transform: translate(-50%, -8px); transition: opacity 0.2s ease, transform 0.2s ease;
+                `;
+                document.body.appendChild(toastEl);
+            }
+            toastEl.textContent = message;
+            requestAnimationFrame(() => {
+                toastEl.style.opacity = '1';
+                toastEl.style.transform = 'translate(-50%, 0)';
+            });
+            clearTimeout(toastHideTimer);
+            toastHideTimer = setTimeout(() => {
+                toastEl.style.opacity = '0';
+                toastEl.style.transform = 'translate(-50%, -8px)';
+            }, 1800);
+        }
+
+        // 구간 선택 도중 Esc를 누르면 취소
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && captureMode) {
+                captureMode = false;
+                captureStartIdx = null;
+                setCapturePicking(false);
+                clearCaptureHighlight();
+                document.getElementById('hint-banner').style.display = 'none';
+                showToast('구간 선택이 취소되었습니다');
+            }
+        });
+
+        function openQuickPicker(lineIdx) {
+            lineChangeTargetIdx = lineIdx;
+            const listContainer = document.getElementById('pickerList');
+            listContainer.innerHTML = "";
+            Object.keys(profiles).forEach(name => {
+                const btn = document.createElement('button');
+                btn.className = "core-btn";
+                btn.style.textAlign = "left";
+                btn.innerText = `${name} (@${profiles[name].id})`;
+                btn.onclick = () => {
+                    chatData[lineChangeTargetIdx].name = name;
+                    renderChat();
+                    document.getElementById('overlayPicker').style.display = 'none';
+                };
+                listContainer.appendChild(btn);
+            });
+            document.getElementById('overlayPicker').style.display = 'flex';
+        }
+
+        window.insertLineRow = function(idx) {
+            const current = chatData[idx];
+            chatData.splice(idx + 1, 0, { name: current.name, time: current.time, content: "새로운 대화 내용을 기입해 주세요." });
+            renderChat();
+        };
+        window.deleteLineRow = function(idx) {
+            chatData.splice(idx, 1);
+            renderChat();
+        };
+        window.moveRowUp = function(idx) {
+            if (idx <= 0) return;
+            const tmp = chatData[idx - 1];
+            chatData[idx - 1] = chatData[idx];
+            chatData[idx] = tmp;
+            renderChat();
+        };
+        window.moveRowDown = function(idx) {
+            if (idx >= chatData.length - 1) return;
+            const tmp = chatData[idx + 1];
+            chatData[idx + 1] = chatData[idx];
+            chatData[idx] = tmp;
+            renderChat();
+        };
+
+        // 화면에 표시된(수정 중이었을 수 있는) contenteditable의 최신 내용을 chatData에 동기화.
+        // 가상 스크롤 환경에서는 DOM 순번(chatFlow.children[idx])이 chatData 인덱스와 더 이상 일치하지
+        // 않으므로, 각 행에 심어둔 dataset.index로 직접 찾는다. 화면 밖이라 안 그려진 행이면
+        // 애초에 편집될 수 없었으니 조용히 건너뛴다(=이미 chatData가 최신 상태).
+        function syncRowFromDom(idx) {
+            const lineEl = chatFlow.querySelector(`[data-index="${idx}"]`);
+            if (!lineEl) return;
+            const bubbleEls = lineEl.querySelectorAll('.char-content');
+            if (bubbleEls.length === 0) return;
+            chatData[idx].content = Array.from(bubbleEls).map(b => b.innerText).join('\n');
+        }
+
+        // contenteditable 안에서 커서(캐럿)의 문자 위치를 셈 (자식 노드 구조와 무관하게 안전)
+        function getCaretOffsetWithin(element) {
+            let caretOffset = 0;
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                const preCaretRange = range.cloneRange();
+                preCaretRange.selectNodeContents(element);
+                preCaretRange.setEnd(range.endContainer, range.endOffset);
+                caretOffset = preCaretRange.toString().length;
+            }
+            return caretOffset;
+        }
+
+        // 대사 칸을 클릭/키보드로 조작할 때마다 커서 위치를 미리 캐싱해둔다.
+        // 대사 칸을 클릭/키보드로 조작할 때마다 커서 위치를 미리 캐싱해둔다. "커서에서 분리" 버튼은
+        // 이 캐시값을 기준으로 나눈다(클릭 시점에 getSelection을 직접 읽는 것보다 안정적).
+        // 카톡 레이아웃에서는 말풍선이 여러 칸으로 쪼개져 있을 수 있어서, 그 앞의 칸들 길이(+줄바꿈)를
+        // 더해 "이어붙인 전체 텍스트" 기준 위치로 환산해서 저장한다.
+        function cacheCaretPositionMulti(lineEl, bubbleEls, focusedEl) {
+            let offset = 0;
+            for (const b of bubbleEls) {
+                if (b === focusedEl) {
+                    offset += getCaretOffsetWithin(b);
+                    break;
+                }
+                offset += b.innerText.length + 1; // +1은 이어붙일 때 들어가는 개행문자
+            }
+            lineEl.dataset.lastCaret = String(offset);
+        }
+
+        // 위 행과 합치기: 현재 행의 내용을 바로 위 행 끝에 붙이고, 현재 행은 삭제 (이름은 위 행 기준 유지)
+        window.mergeLineUp = function(idx) {
+            if (idx === 0) return;
+            // 🌟 renderChat() 전에 포커스를 먼저 풀어서 focusout이 "아직 붙어있고 값도 최신일 때"
+            // 실행되게 한다. 이러면 뒤에서 DOM이 뜯겨나가도 낡은 focusout이 chatData를 덮어쓸 일이 없다.
+            const lineEl = chatFlow.querySelector(`[data-index="${idx}"]`);
+            if (document.activeElement && lineEl && lineEl.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+            syncRowFromDom(idx - 1);
+            syncRowFromDom(idx);
+            chatData[idx - 1].content = chatData[idx - 1].content + '\n' + chatData[idx].content;
+            chatData.splice(idx, 1);
+            renderChat();
+        };
+
+        // 커서에서 분리: 대사 칸에 커서를 두었다가(클릭/키 입력) 누르면, 캐싱해둔 위치 기준으로 두 행으로 나눔
+        window.splitLineAtCursor = function(idx) {
+            const lineEl = chatFlow.querySelector(`[data-index="${idx}"]`);
+            const bubbleEls = lineEl ? Array.from(lineEl.querySelectorAll('.char-content')) : [];
+            if (bubbleEls.length === 0) return;
+
+            const cached = lineEl.dataset.lastCaret;
+            if (cached === undefined) {
+                alert('먼저 나누고 싶은 대사 칸을 한 번 클릭해서 커서를 두고 다시 눌러주세요.');
+                return;
+            }
+
+            const caretPos = parseInt(cached, 10);
+            const fullText = bubbleEls.map(b => b.innerText).join('\n');
+
+            if (caretPos === 0 || caretPos >= fullText.length) {
+                alert('커서가 맨 앞이나 맨 뒤에 있어요. 나눌 위치를 다시 확인해주세요.');
+                return;
+            }
+
+            const before = fullText.slice(0, caretPos).replace(/\n+$/, '');
+            const after = fullText.slice(caretPos).replace(/^\n+/, '');
+
+            if (!before.trim() || !after.trim()) {
+                alert('커서 앞뒤로 나눌 내용이 없습니다. 위치를 다시 확인해주세요.');
+                return;
+            }
+
+            // 🌟 mergeLineUp과 동일: renderChat() 전에 포커스를 미리 풀어서, 낡은 focusout이
+            // 방금 나눈 값을 원본 전체 텍스트로 덮어쓰지 못하게 한다.
+            if (document.activeElement && lineEl.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+
+            chatData[idx].content = before;
+            chatData.splice(idx + 1, 0, { name: chatData[idx].name, time: chatData[idx].time, content: after });
+            renderChat();
+        };
+
+        function openProfileModal(name) {
+            activeEditName = name;
+            const modal = document.getElementById('overlay');
+            const delBtn = document.getElementById('modal-del');
+            if (name) {
+                document.getElementById('modalTitle').innerText = "👤 인물 정보 수정";
+                document.getElementById('mCharName').value = name;
+                document.getElementById('mCharId').value = profiles[name].id;
+                document.getElementById('mCharPfp').value = profiles[name].pfp;
+                document.getElementById('mCharColor').value = profiles[name].color || "";
+                setPfpModeSelect(profiles[name].pfpEmptyMode === 'omit' ? 'omit' : 'color');
+                delBtn.style.display = "block";
+            } else {
+                document.getElementById('modalTitle').innerText = "✨ 새로운 인물 추가";
+                document.getElementById('mCharName').value = "";
+                document.getElementById('mCharId').value = "";
+                document.getElementById('mCharPfp').value = "";
+                document.getElementById('mCharColor').value = "";
+                setPfpModeSelect('color');
+                delBtn.style.display = "none";
+            }
+            modal.classList.add('show');
+        }
+
+        // 🌟 [색만 표시]/[생략] 토글을 세팅하고, 색상 입력 표시 여부도 그에 맞춘다
+        function setPfpModeSelect(val) {
+            document.querySelectorAll('[data-id="mCharPfpModeSelect"] .toggle-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.val === val);
+            });
+            document.getElementById('mCharColorRow').style.display = val === 'omit' ? 'none' : 'block';
+        }
+
+        document.getElementById('modal-cancel').onclick = () => document.getElementById('overlay').classList.remove('show');
+        
+        document.getElementById('modal-save').onclick = () => {
+            const name = document.getElementById('mCharName').value.trim();
+            const id = document.getElementById('mCharId').value.trim();
+            const pfp = normalizeImgUrl(document.getElementById('mCharPfp').value.trim());
+            const color = document.getElementById('mCharColor').value.trim() || colors[Object.keys(profiles).length % colors.length];
+            const pfpEmptyMode = document.querySelector('[data-id="mCharPfpModeSelect"] .toggle-btn.active')?.dataset.val || 'color';
+            if(!name) return alert('이름은 필수 요소입니다.');
+
+            if (activeEditName) {
+                if (activeEditName !== name) {
+                    chatData.forEach(c => { if(c.name === activeEditName) c.name = name; });
+                    delete profiles[activeEditName];
+                }
+            }
+            profiles[name] = { id, pfp, color, pfpEmptyMode };
+            document.getElementById('overlay').classList.remove('show');
+            renderProfiles();
+            renderChat();
+        };
+
+        document.getElementById('modal-del').onclick = () => {
+            if(activeEditName && confirm(`현재 인물(${activeEditName}) 정보를 삭제하시겠습니까?`)) {
+                delete profiles[activeEditName];
+                document.getElementById('overlay').classList.remove('show');
+                renderProfiles();
+                renderChat();
+            }
+        };
+
+        document.querySelectorAll('.btn-group').forEach(group => {
+            group.addEventListener('click', e => {
+                const btn = e.target.closest('.toggle-btn');
+                if(!btn) return;
+                group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const id = group.dataset.id;
+                const val = btn.dataset.val;
+
+                if (id === 'themeSelect') {
+                    document.body.setAttribute('data-theme', val);
+                } else if (id === 'sizeSelect') {
+                    const currentLayout = document.querySelector('[data-id="layoutSelect"] .active').dataset.val;
+                    const currentSize = document.querySelector('[data-id="sizeSelect"] .active').dataset.val;
+                    previewWindow.className = `preview-window layout-${currentLayout} ${currentSize}`;
+                } else if (id === 'layoutSelect') {
+                    const currentLayout = document.querySelector('[data-id="layoutSelect"] .active').dataset.val;
+                    const currentSize = document.querySelector('[data-id="sizeSelect"] .active').dataset.val;
+                    previewWindow.className = `preview-window layout-${currentLayout} ${currentSize}`;
+                    // 카톡 레이아웃은 줄바꿈을 여러 말풍선으로 쪼개는 등 DOM 구조 자체가 달라지므로
+                    // 클래스만 바꿔서는 반영되지 않는다 — 레이아웃 전환 시엔 항상 다시 그린다.
+                    renderChat();
+                } else if (id === 'mCharPfpModeSelect') {
+                    // 🌟 "생략"이면 색상 입력이 의미 없어지니 숨긴다 (모달 편집 중이라 renderChat 불필요)
+                    document.getElementById('mCharColorRow').style.display = val === 'omit' ? 'none' : 'block';
+                } else {
+                    renderChat();
+                }
+            });
+        });
+
+        document.getElementById('btnResetContent').onclick = () => {
+            if(confirm('대화 스크립트 및 내용 편집 내역을 전부 비우시겠습니까?')) {
+                chatData = [];
+                profiles = {};
+                csvFileInput.value = ""; 
+                renderProfiles();
+                renderChat();
+            }
+        };
+
+        document.getElementById('btnResetConfig').onclick = () => {
+            if(confirm('세팅 설정을 기본값으로 돌릴까요?')) {
+                const targets = { layoutSelect: 'twitter', themeSelect: 'light', sizeSelect: 'size-md', pfpShapeSelect: 'pfp-circle', timeFormatSelect: 'date', mentionIdSelect: 'show' };
+                Object.keys(targets).forEach(id => {
+                    const g = document.querySelector(`[data-id="${id}"]`);
+                    g.querySelectorAll('.toggle-btn').forEach(b => {
+                        b.classList.toggle('active', b.dataset.val === targets[id]);
+                    });
+                });
+                document.body.setAttribute('data-theme', 'light');
+                previewWindow.className = 'preview-window layout-twitter size-md';
+                renderChat();
+            }
+        };
+
+        // 구간 선택 상태 진입/해제 — 편집 잠금 클래스와 "편집 중" 잔여 상태를 한 곳에서 정리한다.
+        // 🌟 하이라이트 정리는 반드시 살아있는 미리보기(chatFlow) 안으로만 한정한다 — 화면 밖
+        // 캡처용 래퍼도 document 안에 잠깐 붙어있고 같은 .chat-line/data-index를 갖기 때문에,
+        // 전역 querySelectorAll로 훑으면 캡처 대상까지 같이 건드리게 된다.
+        function clearCaptureHighlight() {
+            chatFlow.querySelectorAll('.chat-line.cap-target').forEach(el => el.classList.remove('cap-target'));
+        }
+
+        // 구간이 확정되면 즉시 선택 상태를 끝낸다(캡처는 그 뒤에 진행).
+        function endCapturePicking() {
+            captureMode = false;
+            captureStartIdx = null;
+            setCapturePicking(false);
+            clearCaptureHighlight();
+            document.getElementById('hint-banner').style.display = "none";
+        }
+
+        function setCapturePicking(on) {
+            previewWindow.classList.toggle('capture-picking', on);
+            if (on) {
+                // 진입 직전에 이미 커서가 들어가 있던 행도 여기서 풀어준다.
+                if (document.activeElement && previewWindow.contains(document.activeElement)) document.activeElement.blur();
+                document.querySelectorAll('.chat-line.editing-mode').forEach(el => el.classList.remove('editing-mode'));
+            }
+        }
+
+        document.getElementById('btnCapRange').onclick = () => {
+            captureMode = true;
+            captureStartIdx = null;
+            setCapturePicking(true);
+            document.getElementById('hint-banner').innerText = "구간 지정 상태: 시작 대화 라인을 선택하세요.";
+            document.getElementById('hint-banner').style.display = "block";
+            showToast('시작 지점을 선택해주세요');
+        };
+
+        async function handleRangeSelect(idx, element) {
+            if (captureStartIdx === null) {
+                captureStartIdx = idx;
+                element.classList.add('cap-target');
+                document.getElementById('hint-banner').innerText = "구간 지정 상태: 마칠 대화 라인으로 마우스를 이동 후 클릭하세요.";
+            } else {
+                const start = Math.min(captureStartIdx, idx);
+                const end = Math.max(captureStartIdx, idx);
+
+                // 🌟 여기부터는 await로 넘어가는 비동기 구간이다. 선택 상태를 남겨두면 그 사이
+                // 마우스가 조금만 움직여도 mouseover 하이라이터가 다시 돌면서, 방금 만든 캡처용
+                // 행(살아있는 행과 같은 data-index를 갖는다)에까지 cap-target을 덧칠해서
+                // 회색 하이라이트가 결과물에 그대로 찍혀 나왔다. 구간이 정해진 즉시 끝낸다.
+                endCapturePicking();
+
+                const outerWrapper = document.createElement('div');
+                outerWrapper.style.position = 'absolute';
+                outerWrapper.style.left = '-9999px';
+                outerWrapper.style.top = '0';
+                outerWrapper.style.width = `${previewWindow.offsetWidth + 60}px`;
+                outerWrapper.style.height = 'auto';
+                outerWrapper.style.backgroundColor = 'transparent';
+
+                const cropWrapper = document.createElement('div');
+                cropWrapper.className = previewWindow.className;
+                
+                const currentTheme = document.body.getAttribute('data-theme') || 'light';
+                const targetBgColor = currentTheme === 'dark' ? '#12161c' : '#ffffff';
+                
+                cropWrapper.style.backgroundColor = targetBgColor;
+                cropWrapper.style.backgroundImage = 'none';
+                cropWrapper.style.boxShadow = 'none';
+                cropWrapper.style.width = `${previewWindow.offsetWidth}px`;
+                cropWrapper.style.height = 'auto';
+                cropWrapper.style.minHeight = 'initial';
+                cropWrapper.style.margin = '0';
+                cropWrapper.style.padding = '30px'; 
+
+                outerWrapper.appendChild(cropWrapper);
+                document.body.appendChild(outerWrapper);
+
+                // chatData 기준으로 항상 새로 만든다 (화면에 지금 없는 행이 범위에 포함될 수 있으므로).
+                for (let i = start; i <= end; i++) {
+                    cropWrapper.appendChild(buildRowElement(chatData[i], i, { noTools: true }));
+                }
+
+                await prepareImagesForCapture(cropWrapper);
+
+                html2canvas(cropWrapper, { ...CAPTURE_H2C_OPTS, backgroundColor: targetBgColor }).then(async canvas => {
+                    await downloadCanvas(canvas, `chat-range-crop-${Date.now()}.png`);
+                    outerWrapper.remove();
+                });
+            }
+        }
+
+        // 브라우저마다 다르지만 캔버스 한 변의 최대 픽셀 크기가 대략 14,000~16,384px 선에서
+        // 막힌다. 그 이상으로 그리려고 하면 html2canvas가 에러 없이 그냥 빈/깨진 캔버스를
+        // 반환해서 "0KB, 파일이 안 열림" 증상으로 나타난다. 그래서 이 높이를 넘으면 행 경계에서
+        // 끊어 여러 장으로 나눠서 순서대로 캡쳐한다 (행 중간에서 잘리지 않도록 보장).
+        const SAFE_CHUNK_HEIGHT = 11000; // 한도(12000px 안팎)보다 여유를 둔 안전 기준
+
+        document.getElementById('btnExportImg').onclick = async () => {
+            if (chatData.length === 0) return;
+
+            const currentTheme = document.body.getAttribute('data-theme') || 'light';
+            const targetBgColor = currentTheme === 'dark' ? '#12161c' : '#ffffff';
+
+            // 1. 실제 렌더링 높이를 재기 위해 전체 행을 화면 밖에 한 번 그려본다.
+            const rowEls = chatData.map((item, i) => buildRowElement(item, i, { noTools: true }));
+
+            const measureWrapper = document.createElement('div');
+            measureWrapper.className = previewWindow.className;
+            measureWrapper.style.position = 'absolute';
+            measureWrapper.style.left = '-9999px';
+            measureWrapper.style.top = '0';
+            measureWrapper.style.width = `${previewWindow.offsetWidth}px`;
+            measureWrapper.style.height = 'auto';
+            measureWrapper.style.minHeight = 'initial';
+            rowEls.forEach(el => measureWrapper.appendChild(el));
+            document.body.appendChild(measureWrapper);
+            const rowHeights = rowEls.map(el => el.offsetHeight);
+            document.body.removeChild(measureWrapper); // rowEls는 detach되지만 그대로 재사용 가능
+
+            // 2. 행 중간에서 끊기지 않게, 안전 높이를 넘기기 직전 행 경계에서 청크를 나눈다.
+            const chunks = [];
+            let current = [];
+            let currentH = 0;
+            rowHeights.forEach((h, i) => {
+                if (current.length > 0 && currentH + h > SAFE_CHUNK_HEIGHT) {
+                    chunks.push(current);
+                    current = [];
+                    currentH = 0;
+                }
+                current.push(i);
+                currentH += h;
+            });
+            if (current.length > 0) chunks.push(current);
+
+            const totalHeight = rowHeights.reduce((a, b) => a + b, 0);
+
+            // 한 번에 담기지 않아(=12,000px 초과) 분할이 필요한 순간부터는 반드시 확인받는다.
+
+            // 장수가 많아지면 브라우저가 다수 파일 다운로드를 막거나 시간이 오래 걸릴 수 있어서다.
+
+            // 이 정도로 무거운 로그는 장수 제한이 없는 HTML 내보내기 쪽이 낫다.
+            if (chunks.length > 1) {
+                const proceed = confirm(
+                    `⚠️ 이 대화는 전체 길이가 ${totalHeight.toLocaleString()}px이라 12,000px을 초과해서 한 번에 캡쳐가 불가능해요.\n\n` +
+                    `총 길이 12,000px을 넘지 않는 선에서 나눠서(${chunks.length}장) 캡쳐를 시도할 수 있지만, 캡쳐 자체가 오래 걸리거나 파일이 많아 다운로드가 제대로 안 될 수 있어요.\n` +
+                    `이 정도로 무거운 로그는 "웹 문서 형태로 보관하기(HTML)"로 저장하는 걸 추천해요 — HTML은 길다고 저장이 안 되는 문제가 없어요.\n\n` +
+                    `그래도 지금 전체 ${chunks.length}장 캡쳐를 진행할까요?`
+                );
+                if (!proceed) return;
+                showToast('📥 여러 파일 다운로드 허용을 물어보면 꼭 허용해주세요!');
+            }
+
+            const oversizedIdx = rowHeights.findIndex(h => h > SAFE_CHUNK_HEIGHT);
+            if (oversizedIdx !== -1) {
+                showToast(`⚠️ ${oversizedIdx + 1}번째 행 자체가 너무 커서(${rowHeights[oversizedIdx].toLocaleString()}px) 그 장만 캡쳐가 실패할 수 있어요.`);
+            }
+
+            // 3. 청크별로 순서대로 캡쳐 (1장이든 여러 장이든 같은 경로를 탄다)
+            const stamp = Date.now();
+            for (let c = 0; c < chunks.length; c++) {
+                const indices = chunks[c];
+
+                const outerWrapper = document.createElement('div');
+                outerWrapper.style.position = 'absolute';
+                outerWrapper.style.left = '-9999px';
+                outerWrapper.style.top = '0';
+                outerWrapper.style.width = `${previewWindow.offsetWidth + 60}px`;
+                outerWrapper.style.height = 'auto';
+                outerWrapper.style.backgroundColor = 'transparent';
+
+                const wrapper = document.createElement('div');
+                wrapper.className = previewWindow.className;
+                wrapper.style.backgroundColor = targetBgColor;
+                wrapper.style.backgroundImage = 'none';
+                wrapper.style.boxShadow = 'none';
+                wrapper.style.width = `${previewWindow.offsetWidth}px`;
+                wrapper.style.height = 'auto';
+                wrapper.style.minHeight = 'initial';
+                wrapper.style.margin = '0';
+                wrapper.style.padding = '30px';
+
+                outerWrapper.appendChild(wrapper);
+                document.body.appendChild(outerWrapper);
+
+                // 이미 만들어둔 요소를 그대로 옮겨붙인다 (매번 새로 만들 필요 없음)
+                indices.forEach(i => wrapper.appendChild(rowEls[i]));
+
+                await prepareImagesForCapture(wrapper);
+                const canvas = await html2canvas(wrapper, { ...CAPTURE_H2C_OPTS, backgroundColor: targetBgColor });
+
+                await downloadCanvas(canvas, chunks.length > 1
+                    ? `chat-all-part${c + 1}of${chunks.length}-${stamp}.png`
+                    : `chat-all-${stamp}.png`);
+
+                outerWrapper.remove();
+            }
+
+            if (chunks.length > 1) {
+                showToast(`✅ 총 ${chunks.length}장 캡쳐 완료!`);
+            }
+        };
+
+        // ── 내보내기 엔진 ────────────────────────────────────────────────────
+        // CSSOM으로 규칙을 하나씩 훑어 (1) 실제로 내보낼 DOM에 걸리는 규칙만 남기고
+        // (2) 모든 선택자를 .tarae-archive 래퍼 아래로 스코프한다. html/body 전역 규칙을
+        // 버리므로 붙여넣은 페이지의 배경을 덮지 않고, CSSOM cssText에는 주석이 없어
+        // 개발 주석도 결과물로 따라가지 않는다.
+        const EXPORT_SCOPE = 'tarae-archive';
+
+        // 매칭 검사용으로만 떼어내는 의사 클래스/요소 — :not() 등 구조 선택자는 건드리지 않는다.
+        const EXPORT_PSEUDO_RE = /::?(hover|focus|focus-within|focus-visible|active|visited|target|checked|indeterminate|disabled|enabled|placeholder|placeholder-shown|selection|before|after|first-line|first-letter|marker|backdrop|-webkit-[\w-]+|-moz-[\w-]+)(\([^)]*\))?/gi;
+
+        function collectExportCss(exportRoot, theme) {
+            const styleEl = document.querySelector('style');
+            const sheet = styleEl && styleEl.sheet;
+            if (!sheet) return '';
+
+            // 실제 내보낼 DOM 사본을 별도 문서에 띄워두고, 선택자가 여기에 걸리는지로만 판단한다.
+            const testDoc = document.implementation.createHTMLDocument('');
+            testDoc.body.appendChild(exportRoot.cloneNode(true));
+
+            const isUsed = (sel) => {
+                const probe = sel.replace(EXPORT_PSEUDO_RE, '').trim();
+                if (!probe) return false;
+                try { return !!testDoc.querySelector(probe); } catch (e) { return false; }
+            };
+
+            const scopeSelector = (raw) => {
+                let sel = raw.trim();
+
+                const m = sel.match(/^body\[data-theme=["']?([\w-]+)["']?\]\s*/);
+                if (m) {
+                    if (m[1] !== theme) return null;   // 지금 테마가 아닌 규칙은 통째로 불필요
+                    sel = sel.slice(m[0].length).trim();
+                }
+
+                // 테마 변수 선언부는 래퍼가 대신 들고 간다.
+                if (!sel || sel === ':root') return `.${EXPORT_SCOPE}`;
+                // 페이지 전역 규칙(html/body 레이아웃, * 리셋)은 붙여넣은 페이지를 오염시키므로 버린다.
+                if (/^(html|body)$/i.test(sel) || sel.startsWith('*')) return null;
+                // 편집 기능이 빠진 결과물에서는 절대 발동할 수 없는 상태 규칙들.
+                if (/:(focus|focus-visible|focus-within|active|checked|disabled)\b/i.test(sel)) return null;
+                if (!isUsed(sel)) return null;
+                return `.${EXPORT_SCOPE} ${sel}`;
+            };
+
+            const out = [];
+            const keyframes = [];
+
+            const walk = (rules, sink) => {
+                for (const rule of rules) {
+                    if (rule.type === CSSRule.STYLE_RULE) {
+                        const body = rule.style.cssText;
+                        if (!body) continue;
+                        const sels = rule.selectorText.split(',').map(scopeSelector).filter(Boolean);
+                        if (sels.length) sink.push(`${sels.join(', ')} { ${body} }`);
+                    } else if (rule.type === CSSRule.MEDIA_RULE) {
+                        const inner = [];
+                        walk(rule.cssRules, inner);
+                        if (inner.length) sink.push(`@media ${rule.conditionText} { ${inner.join(' ')} }`);
+                    } else if (rule.type === CSSRule.KEYFRAMES_RULE) {
+                        keyframes.push(rule);
+                    } else if (rule.type === CSSRule.FONT_FACE_RULE) {
+                        sink.push(rule.cssText);
+                    }
+                }
+            };
+            walk(sheet.cssRules, out);
+
+            const usedCss = out.join(' ');
+            keyframes.forEach(kf => {
+                if (new RegExp(`(animation[^;]*\\b)${kf.name}\\b`).test(usedCss)) out.push(kf.cssText);
+            });
+
+            return out.join('\n');
+        }
+
+        document.getElementById('btnExportHtml').onclick = () => {
+            // chatData 전체를 기준으로 새로 조립한다. noTools:true라 line-tools 자체가 애초에 안 만들어진다.
+            const cloneFlow = document.createElement('div');
+            chatData.forEach((item, i) => {
+                cloneFlow.appendChild(buildRowElement(item, i, { noTools: true }));
+            });
+            // contenteditable만 떼면 :focus 스타일은 애초에 걸릴 수 없다 — 예전처럼 outline/border를
+            // 인라인으로 덮어쓰면 border-image:initial 같은 축약 해제 찌꺼기만 길게 남고,
+            // 카톡 레이아웃에선 말풍선 padding까지 망가져서 예외 분기가 필요했다.
+            cloneFlow.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+            cloneFlow.querySelectorAll('[data-index]').forEach(el => el.removeAttribute('data-index'));
+            cloneFlow.querySelectorAll('[style=""]').forEach(el => el.removeAttribute('style'));
+
+            const currentTheme = document.body.getAttribute('data-theme') || 'light';
+
+            // 내보낼 DOM을 실제로 조립한다(= CSS 추출의 기준이 되는 트리).
+            const exportRoot = document.createElement('div');
+            exportRoot.className = EXPORT_SCOPE;
+            const frame = document.createElement('div');
+            frame.className = previewWindow.className;
+            if (previewWindow.style.cssText) frame.style.cssText = previewWindow.style.cssText;
+            frame.innerHTML = cloneFlow.innerHTML;
+            exportRoot.appendChild(frame);
+
+            // 래퍼 안쪽에만 걸리는 기본 규칙 — 바깥 페이지(html/body)는 전혀 건드리지 않는다.
+            const baseCss = `.${EXPORT_SCOPE} { display: flex; justify-content: center; font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: var(--text); }
+.${EXPORT_SCOPE} *, .${EXPORT_SCOPE} *::before, .${EXPORT_SCOPE} *::after { box-sizing: border-box; margin: 0; padding: 0; }`;
+            // 마지막 덮어쓰기 — 배경은 프레임(.preview-window)에만 남긴다. 폭은 원래대로 660px 고정.
+            const overrideCss = `.${EXPORT_SCOPE} .preview-window { min-height: 0; box-shadow: none; transition: none; }
+.${EXPORT_SCOPE} .clickable-name, .${EXPORT_SCOPE} .pfp-area { cursor: default; }
+.${EXPORT_SCOPE} .clickable-name:hover { text-decoration: none; }`;
+
+            const css = `${baseCss}\n${collectExportCss(exportRoot, currentTheme)}\n${overrideCss}`;
+
+            const htmlContent = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>타래 아카이브</title>
+<style>
+${css}
+</style>
+</head>
+<body>
+${exportRoot.outerHTML}
+</body>
+</html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `archive-log-${Date.now()}.html`;
+            link.click();
+        };
+
+        // 현재 편집 상태를 확장 CSV(5열 구조)로 다시 내보낸다.
+        document.getElementById('btnExportCsv').onclick = () => {
+            if (chatData.length === 0) {
+                alert('내보낼 대화 내역 데이터가 존재하지 않습니다.');
+                return;
+            }
+
+            // 한글 깨짐 방지용 BOM 코드 삽입 및 헤더 정의 (5번째 열 프로필 이미지 경로 탑재)
+            let csvString = "\uFEFF이름,아이디,타임스탬프,본문,프로필이미지\n";
+
+            chatData.forEach(item => {
+                // 현재 대사 줄을 렌더링하고 있는 인물의 인디비주얼 프로필 객체 스캔
+                const prof = profiles[item.name] || { id: "", pfp: "" };
+
+                // 데이터 내 쉼표나 개행문자가 구조를 흔들지 않도록 안전하게 큰따옴표 이중 래핑
+                const cleanName = `"${item.name.replace(/"/g, '""')}"`;
+                const cleanId = `"${prof.id.replace(/"/g, '""')}"`;
+                const cleanTime = `"${item.time.replace(/"/g, '""')}"`;
+                const cleanContent = `"${item.content.replace(/"/g, '""')}"`;
+                const cleanPfp = `"${(prof.pfp || "").replace(/"/g, '""')}"`;
+
+                csvString += `${cleanName},${cleanId},${cleanTime},${cleanContent},${cleanPfp}\n`;
+            });
+
+            // 다운로드 파일 빌드 트리거
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `edited-chat-log-${Date.now()}.csv`;
+            link.click();
+        };
+
+        /* 브라우저 내부 로컬스토리지 백업 모듈 */
+        document.getElementById('btnSaveStorage').onclick = () => {
+            if(chatData.length === 0) {
+                alert('저장할 대화 내역이 없습니다. 타래(CSV)를 먼저 불러와 주세요.');
+                return;
+            }
+            const snapshot = {
+                chatData: chatData,
+                profiles: profiles,
+                theme: document.body.getAttribute('data-theme') || 'light',
+                layout: document.querySelector('[data-id="layoutSelect"] .active').dataset.val,
+                size: document.querySelector('[data-id="sizeSelect"] .active').dataset.val,
+                shape: document.querySelector('[data-id="pfpShapeSelect"] .active').dataset.val,
+                timeFormat: document.querySelector('[data-id="timeFormatSelect"] .active').dataset.val
+            };
+            localStorage.setItem('timeline_backup_snapshot', JSON.stringify(snapshot));
+            alert('현재 작업 세션과 모든 스타일 환경 세팅이 브라우저에 안전하게 저장되었습니다.');
+        };
+
+        document.getElementById('btnLoadStorage').onclick = () => {
+            const rawData = localStorage.getItem('timeline_backup_snapshot');
+            if(!rawData) {
+                alert('현재 브라우저에 저장된 아카이브 스냅샷 이력이 없습니다.');
+                return;
+            }
+            const restored = JSON.parse(rawData);
+            
+            chatData = restored.chatData || [];
+            profiles = restored.profiles || {};
+            Object.values(profiles).forEach(p => { if (p.pfp) p.pfp = normalizeImgUrl(p.pfp); });
+
+            const syncButtons = (groupId, savedValue) => {
+                const group = document.querySelector(`[data-id="${groupId}"]`);
+                if(!group) return;
+                group.querySelectorAll('.toggle-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.val === savedValue);
+                });
+            };
+
+            syncButtons('themeSelect', restored.theme);
+            syncButtons('layoutSelect', restored.layout);
+            syncButtons('sizeSelect', restored.size);
+            syncButtons('pfpShapeSelect', restored.shape);
+            syncButtons('timeFormatSelect', restored.timeFormat);
+
+            document.body.setAttribute('data-theme', restored.theme);
+            previewWindow.className = `preview-window layout-${restored.layout} ${restored.size}`;
+
+            renderProfiles();
+            renderChat();
+            alert('이전 편집 히스토리와 세팅 옵션을 정상적으로 복구시켰습니다.');
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>타래 검사기</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%A9%BA</text></svg>">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg: #f8f7f4;
+    --surface: #ffffff;
+    --surface2: #f2f0ec;
+    --border: rgba(0,0,0,0.10);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1916;
+    --text2: #6b6860;
+    --text3: #a09e99;
+    --primary: #5E7C8A;
+    --primary-soft: #E9EEF0;
+    --radius-md: 10px;
+    --ok: #3f7d5c;
+    --ok-bg: #eaf3ee;
+    --warn: #9a6b21;
+    --warn-bg: #faf1e0;
+    --bad: #a4423a;
+    --bad-bg: #faecea;
+    --mono: 'SFMono-Regular', Consolas, 'D2Coding', 'Courier New', monospace;
+}
+
+body {
+    font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    background: var(--bg); color: var(--text);
+    padding: 0 0 60px;
+    display: flex; flex-direction: column; align-items: center;
+    line-height: 1.6;
+}
+
+.top-nav {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px; background: var(--surface);
+    border-bottom: 1px solid var(--border); margin-bottom: 28px;
+}
+.top-nav-brand { font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; text-decoration: none; color: var(--text); }
+
+.wrap { width: 100%; max-width: 780px; padding: 0 20px; }
+
+h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.sub { color: var(--text2); font-size: 13.5px; margin-top: 6px; margin-bottom: 22px; }
+
+button:focus-visible, label:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 20px; margin-bottom: 16px;
+}
+
+.drop {
+    display: block; text-align: center; padding: 30px 20px; cursor: pointer;
+    border: 2px dashed var(--border2); border-radius: var(--radius-md);
+    background: var(--surface2); font-size: 14px; font-weight: 600; color: var(--text2);
+}
+.drop:hover { border-color: var(--primary); color: var(--primary); }
+.drop.drag { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+input[type=file] { display: none; }
+
+
+.btn {
+    font-size: 13px; font-weight: 700; padding: 9px 16px; border-radius: var(--radius-md);
+    border: 1px solid var(--border2); background: var(--surface); color: var(--text2); cursor: pointer;
+}
+.btn:hover { background: var(--surface2); color: var(--text); }
+.btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+
+/* 진단 결과 */
+.verdict { border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 14px; font-size: 14px; font-weight: 700; }
+.verdict.ok { background: var(--ok-bg); color: var(--ok); }
+.verdict.warn { background: var(--warn-bg); color: var(--warn); }
+.verdict.bad { background: var(--bad-bg); color: var(--bad); }
+.verdict .detail { display: block; font-weight: 500; font-size: 13px; margin-top: 5px; }
+
+.sec-title { font-size: 12px; font-weight: 800; color: var(--text3); letter-spacing: .06em; margin: 18px 0 8px; }
+.kv { display: grid; grid-template-columns: 130px 1fr; gap: 4px 12px; font-size: 13px; }
+.kv dt { color: var(--text2); }
+.kv dd { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+
+.flag { font-size: 13px; padding: 9px 12px; border-radius: 8px; margin-bottom: 6px; }
+.flag.ok  { background: var(--ok-bg); color: var(--ok); }
+.flag.warn{ background: var(--warn-bg); color: var(--warn); }
+.flag.bad { background: var(--bad-bg); color: var(--bad); }
+
+/* 코드포인트 X-ray */
+.xray { background: var(--surface2); border-radius: 8px; padding: 12px; overflow-x: auto; }
+.xray-line { font-family: var(--mono); font-size: 12px; color: var(--text2); margin-bottom: 8px; word-break: break-all; }
+.chips { display: flex; flex-wrap: wrap; gap: 3px; }
+.chip {
+    font-family: var(--mono); font-size: 10.5px; line-height: 1.25; text-align: center;
+    padding: 3px 4px; border-radius: 4px; background: var(--surface);
+    border: 1px solid var(--border); min-width: 30px;
+}
+.chip b { display: block; font-size: 12px; font-weight: 700; }
+.chip.sus { background: var(--bad-bg); border-color: #e5bdb8; color: var(--bad); }
+.chip.mask { background: var(--surface2); border-color: var(--border); color: var(--text3); }
+.chip.inv { background: var(--warn-bg); border-color: #e6d3ae; color: var(--warn); }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: 11.5px; color: var(--text3); font-weight: 700; letter-spacing: .04em; }
+td.c { white-space: pre-wrap; word-break: break-word; }
+.tbl-wrap { max-height: 380px; overflow: auto; }
+
+.note { font-size: 12.5px; color: var(--text2); background: var(--surface2); padding: 11px 13px; border-radius: 8px; margin-top: 12px; }
+.hidden { display: none; }
+.count { font-size: 13px; color: var(--text2); margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+    <a class="top-nav-brand" href="#">🩺 타래 검사기</a>
+</nav>
+
+<div class="wrap">
+    <h1>파일이 왜 안 읽히는지 확인하기</h1>
+    <p class="sub">대화 파일을 넣으면 어디서 멈추는지 알려줍니다. 파일은 이 페이지 밖으로 나가지 않고, 검사 결과에서 대화 내용과 파일 이름은 ●로 가려집니다.</p>
+
+    <!-- ============ 파일 검사 ============ -->
+    <section>
+        <div class="card">
+            <label class="drop" id="drop" tabindex="0">
+                📁 파일 선택 — 카톡 zip·txt, 트위터·마스토돈 HTML (끌어다 놓아도 됩니다)
+                <input type="file" id="file" accept=".zip,.txt,.html,.htm">
+            </label>
+        </div>
+        <div id="report"></div>
+    </section>
+
+</div>
+
+<script>/*! fflate (inlined) */
+!function(f){typeof module!='undefined'&&typeof exports=='object'?module.exports=f():typeof define!='undefined'&&define.amd?define(f):(typeof self!='undefined'?self:this).fflate=f()}(function(){var _e={};"use strict";var t=(typeof module!='undefined'&&typeof exports=='object'?function(_f){"use strict";var e,t=";var __w=require('worker_threads');__w.parentPort.on('message',function(m){onmessage({data:m})}),postMessage=function(m,t){__w.parentPort.postMessage(m,t)},close=process.exit;self=global";try{e=require("worker_threads").Worker}catch(e){}exports.default=e?function(r,n,o,a,s){var u=!1,i=new e(r+t,{eval:!0}).on("error",(function(e){return s(e,null)})).on("message",(function(e){return s(null,e)})).on("exit",(function(e){e&&!u&&s(Error("exited with code "+e),null)}));return i.postMessage(o,a),i.terminate=function(){return u=!0,e.prototype.terminate.call(i)},i}:function(e,t,r,n,o){setImmediate((function(){return o(Error("async operations unsupported - update to Node 12+ (or Node 10-11 with the --experimental-worker CLI flag)"),null)}));var a=function(){};return{terminate:a,postMessage:a}};return _f}:function(_f){"use strict";var e={};_f.default=function(r,t,s,a,n){var o=new Worker(e[t]||(e[t]=URL.createObjectURL(new Blob([r+';addEventListener("error",function(e){e=e.error;postMessage({$e$:[e.message,e.code,e.stack]})})'],{type:"text/javascript"}))));return o.onmessage=function(e){var r=e.data,t=r.$e$;if(t){var s=Error(t[0]);s.code=t[1],s.stack=t[2],n(s,null)}else n(null,r)},o.postMessage(s,a),o};return _f})({}),n=Uint8Array,r=Uint16Array,e=Int32Array,i=new n([0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0,0]),o=new n([0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,0,0]),s=new n([16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15]),a=function(t,n){for(var i=new r(31),o=0;o<31;++o)i[o]=n+=1<<t[o-1];var s=new e(i[30]);for(o=1;o<30;++o)for(var a=i[o];a<i[o+1];++a)s[a]=a-i[o]<<5|o;return{b:i,r:s}},u=a(i,2),h=u.b,f=u.r;h[28]=258,f[258]=28;for(var l=a(o,0),c=l.b,p=l.r,v=new r(32768),d=0;d<32768;++d){var g=(43690&d)>>1|(21845&d)<<1;v[d]=((65280&(g=(61680&(g=(52428&g)>>2|(13107&g)<<2))>>4|(3855&g)<<4))>>8|(255&g)<<8)>>1}var y=function(t,n,e){for(var i=t.length,o=0,s=new r(n);o<i;++o)t[o]&&++s[t[o]-1];var a,u=new r(n);for(o=1;o<n;++o)u[o]=u[o-1]+s[o-1]<<1;if(e){a=new r(1<<n);var h=15-n;for(o=0;o<i;++o)if(t[o])for(var f=o<<4|t[o],l=n-t[o],c=u[t[o]-1]++<<l,p=c|(1<<l)-1;c<=p;++c)a[v[c]>>h]=f}else for(a=new r(i),o=0;o<i;++o)t[o]&&(a[o]=v[u[t[o]-1]++]>>15-t[o]);return a},m=new n(288);for(d=0;d<144;++d)m[d]=8;for(d=144;d<256;++d)m[d]=9;for(d=256;d<280;++d)m[d]=7;for(d=280;d<288;++d)m[d]=8;var b=new n(32);for(d=0;d<32;++d)b[d]=5;var w=y(m,9,0),x=y(m,9,1),z=y(b,5,0),k=y(b,5,1),M=function(t){for(var n=t[0],r=1;r<t.length;++r)t[r]>n&&(n=t[r]);return n},S=function(t,n,r){var e=n/8|0;return(t[e]|t[e+1]<<8)>>(7&n)&r},A=function(t,n){var r=n/8|0;return(t[r]|t[r+1]<<8|t[r+2]<<16)>>(7&n)},T=function(t){return(t+7)/8|0},D=function(t,r,e){return(null==r||r<0)&&(r=0),(null==e||e>t.length)&&(e=t.length),new n(t.subarray(r,e))};_e.FlateErrorCode={UnexpectedEOF:0,InvalidBlockType:1,InvalidLengthLiteral:2,InvalidDistance:3,StreamFinished:4,NoStreamHandler:5,InvalidHeader:6,NoCallback:7,InvalidUTF8:8,ExtraFieldTooLong:9,InvalidDate:10,FilenameTooLong:11,StreamFinishing:12,InvalidZipData:13,UnknownCompressionMethod:14};var C=["unexpected EOF","invalid block type","invalid length/literal","invalid distance","stream finished","no stream handler",,"no callback","invalid UTF-8 data","extra field too long","date not in range 1980-2099","filename too long","stream finishing","invalid zip data"],I=function(t,n,r){var e=Error(n||C[t]);if(e.code=t,Error.captureStackTrace&&Error.captureStackTrace(e,I),!r)throw e;return e},U=function(t,r,e,a){var u=t.length,f=a?a.length:0;if(!u||r.f&&!r.l)return e||new n(0);var l=!e,p=l||2!=r.i,v=r.i;l&&(e=new n(3*u));var d=function(t){var r=e.length;if(t>r){var i=new n(Math.max(2*r,t));i.set(e),e=i}},g=r.f||0,m=r.p||0,b=r.b||0,w=r.l,z=r.d,C=r.m,U=r.n,F=8*u;do{if(!w){g=S(t,m,1);var E=S(t,m+1,3);if(m+=3,!E){var Z=t[(J=T(m)+4)-4]|t[J-3]<<8,q=J+Z;if(q>u){v&&I(0);break}p&&d(b+Z),e.set(t.subarray(J,q),b),r.b=b+=Z,r.p=m=8*q,r.f=g;continue}if(1==E)w=x,z=k,C=9,U=5;else if(2==E){var O=S(t,m,31)+257,G=S(t,m+10,15)+4,L=O+S(t,m+5,31)+1;m+=14;for(var H=new n(L),j=new n(19),N=0;N<G;++N)j[s[N]]=S(t,m+3*N,7);m+=3*G;var P=M(j),B=(1<<P)-1,Y=y(j,P,1);for(N=0;N<L;){var J,K=Y[S(t,m,B)];if(m+=15&K,(J=K>>4)<16)H[N++]=J;else{var Q=0,R=0;for(16==J?(R=3+S(t,m,3),m+=2,Q=H[N-1]):17==J?(R=3+S(t,m,7),m+=3):18==J&&(R=11+S(t,m,127),m+=7);R--;)H[N++]=Q}}var V=H.subarray(0,O),W=H.subarray(O);C=M(V),U=M(W),w=y(V,C,1),z=y(W,U,1)}else I(1);if(m>F){v&&I(0);break}}p&&d(b+131072);for(var X=(1<<C)-1,$=(1<<U)-1,_=m;;_=m){var tt=(Q=w[A(t,m)&X])>>4;if((m+=15&Q)>F){v&&I(0);break}if(Q||I(2),tt<256)e[b++]=tt;else{if(256==tt){_=m,w=null;break}var nt=tt-254;tt>264&&(nt=S(t,m,(1<<(it=i[N=tt-257]))-1)+h[N],m+=it);var rt=z[A(t,m)&$],et=rt>>4;if(rt||I(3),m+=15&rt,W=c[et],et>3){var it=o[et];W+=A(t,m)&(1<<it)-1,m+=it}if(m>F){v&&I(0);break}p&&d(b+131072);var ot=b+nt;if(b<W){var st=f-W,at=Math.min(W,ot);for(st+b<0&&I(3);b<at;++b)e[b]=a[st+b]}for(;b<ot;++b)e[b]=e[b-W]}}r.l=w,r.p=_,r.b=b,r.f=g,w&&(g=1,r.m=C,r.d=z,r.n=U)}while(!g);return b!=e.length&&l?D(e,0,b):e.subarray(0,b)},F=function(t,n,r){var e=n/8|0;t[e]|=r<<=7&n,t[e+1]|=r>>8},E=function(t,n,r){var e=n/8|0;t[e]|=r<<=7&n,t[e+1]|=r>>8,t[e+2]|=r>>16},Z=function(t,e){for(var i=[],o=0;o<t.length;++o)t[o]&&i.push({s:o,f:t[o]});var s=i.length,a=i.slice();if(!s)return{t:N,l:0};if(1==s){var u=new n(i[0].s+1);return u[i[0].s]=1,{t:u,l:1}}i.sort((function(t,n){return t.f-n.f})),i.push({s:-1,f:25001});var h=i[0],f=i[1],l=0,c=1,p=2;for(i[0]={s:-1,f:h.f+f.f,l:h,r:f};c!=s-1;)h=i[i[l].f<i[p].f?l++:p++],f=i[l!=c&&i[l].f<i[p].f?l++:p++],i[c++]={s:-1,f:h.f+f.f,l:h,r:f};var v=a[0].s;for(o=1;o<s;++o)a[o].s>v&&(v=a[o].s);var d=new r(v+1),g=q(i[c-1],d,0);if(g>e){o=0;var y=0,m=g-e,b=1<<m;for(a.sort((function(t,n){return d[n.s]-d[t.s]||t.f-n.f}));o<s;++o){var w=a[o].s;if(!(d[w]>e))break;y+=b-(1<<g-d[w]),d[w]=e}for(y>>=m;y>0;){var x=a[o].s;d[x]<e?y-=1<<e-d[x]++-1:++o}for(;o>=0&&y;--o){var z=a[o].s;d[z]==e&&(--d[z],++y)}g=e}return{t:new n(d),l:g}},q=function(t,n,r){return-1==t.s?Math.max(q(t.l,n,r+1),q(t.r,n,r+1)):n[t.s]=r},O=function(t){for(var n=t.length;n&&!t[--n];);for(var e=new r(++n),i=0,o=t[0],s=1,a=function(t){e[i++]=t},u=1;u<=n;++u)if(t[u]==o&&u!=n)++s;else{if(!o&&s>2){for(;s>138;s-=138)a(32754);s>2&&(a(s>10?s-11<<5|28690:s-3<<5|12305),s=0)}else if(s>3){for(a(o),--s;s>6;s-=6)a(8304);s>2&&(a(s-3<<5|8208),s=0)}for(;s--;)a(o);s=1,o=t[u]}return{c:e.subarray(0,i),n:n}},G=function(t,n){for(var r=0,e=0;e<n.length;++e)r+=t[e]*n[e];return r},L=function(t,n,r){var e=r.length,i=T(n+2);t[i]=255&e,t[i+1]=e>>8,t[i+2]=255^t[i],t[i+3]=255^t[i+1];for(var o=0;o<e;++o)t[i+o+4]=r[o];return 8*(i+4+e)},H=function(t,n,e,a,u,h,f,l,c,p,v){F(n,v++,e),++u[256];for(var d=Z(u,15),g=d.t,x=d.l,k=Z(h,15),M=k.t,S=k.l,A=O(g),T=A.c,D=A.n,C=O(M),I=C.c,U=C.n,q=new r(19),H=0;H<T.length;++H)++q[31&T[H]];for(H=0;H<I.length;++H)++q[31&I[H]];for(var j=Z(q,7),N=j.t,P=j.l,B=19;B>4&&!N[s[B-1]];--B);var Y,J,K,Q,R=p+5<<3,V=G(u,m)+G(h,b)+f,W=G(u,g)+G(h,M)+f+14+3*B+G(q,N)+2*q[16]+3*q[17]+7*q[18];if(c>=0&&R<=V&&R<=W)return L(n,v,t.subarray(c,c+p));if(F(n,v,1+(W<V)),v+=2,W<V){Y=y(g,x,0),J=g,K=y(M,S,0),Q=M;var X=y(N,P,0);for(F(n,v,D-257),F(n,v+5,U-1),F(n,v+10,B-4),v+=14,H=0;H<B;++H)F(n,v+3*H,N[s[H]]);v+=3*B;for(var $=[T,I],_=0;_<2;++_){var tt=$[_];for(H=0;H<tt.length;++H)F(n,v,X[rt=31&tt[H]]),v+=N[rt],rt>15&&(F(n,v,tt[H]>>5&127),v+=tt[H]>>12)}}else Y=w,J=m,K=z,Q=b;for(H=0;H<l;++H){var nt=a[H];if(nt>255){var rt;E(n,v,Y[257+(rt=nt>>18&31)]),v+=J[rt+257],rt>7&&(F(n,v,nt>>23&31),v+=i[rt]);var et=31&nt;E(n,v,K[et]),v+=Q[et],et>3&&(E(n,v,nt>>5&8191),v+=o[et])}else E(n,v,Y[nt]),v+=J[nt]}return E(n,v,Y[256]),v+J[256]},j=new e([65540,131080,131088,131104,262176,1048704,1048832,2114560,2117632]),N=new n(0),P=function(t,s,a,u,h,l){var c=l.z||t.length,v=new n(u+c+5*(1+Math.ceil(c/7e3))+h),d=v.subarray(u,v.length-h),g=l.l,y=7&(l.r||0);if(s){y&&(d[0]=l.r>>3);for(var m=j[s-1],b=m>>13,w=8191&m,x=(1<<a)-1,z=l.p||new r(32768),k=l.h||new r(x+1),M=Math.ceil(a/3),S=2*M,A=function(n){return(t[n]^t[n+1]<<M^t[n+2]<<S)&x},C=new e(25e3),I=new r(288),U=new r(32),F=0,E=0,Z=l.i||0,q=0,O=l.w||0,G=0;Z+2<c;++Z){var N=A(Z),P=32767&Z,B=k[N];if(z[P]=B,k[N]=P,O<=Z){var Y=c-Z;if((F>7e3||q>24576)&&(Y>423||!g)){y=H(t,d,0,C,I,U,E,q,G,Z-G,y),q=F=E=0,G=Z;for(var J=0;J<286;++J)I[J]=0;for(J=0;J<30;++J)U[J]=0}var K=2,Q=0,R=w,V=P-B&32767;if(Y>2&&N==A(Z-V))for(var W=Math.min(b,Y)-1,X=Math.min(32767,Z),$=Math.min(258,Y);V<=X&&--R&&P!=B;){if(t[Z+K]==t[Z+K-V]){for(var _=0;_<$&&t[Z+_]==t[Z+_-V];++_);if(_>K){if(K=_,Q=V,_>W)break;var tt=Math.min(V,_-2),nt=0;for(J=0;J<tt;++J){var rt=Z-V+J&32767,et=rt-z[rt]&32767;et>nt&&(nt=et,B=rt)}}}V+=(P=B)-(B=z[P])&32767}if(Q){C[q++]=268435456|f[K]<<18|p[Q];var it=31&f[K],ot=31&p[Q];E+=i[it]+o[ot],++I[257+it],++U[ot],O=Z+K,++F}else C[q++]=t[Z],++I[t[Z]]}}for(Z=Math.max(Z,O);Z<c;++Z)C[q++]=t[Z],++I[t[Z]];y=H(t,d,g,C,I,U,E,q,G,Z-G,y),g||(l.r=7&y|d[y/8|0]<<3,y-=7,l.h=k,l.p=z,l.i=Z,l.w=O)}else{for(Z=l.w||0;Z<c+g;Z+=65535){var st=Z+65535;st>=c&&(d[y/8|0]=g,st=c),y=L(d,y+1,t.subarray(Z,st))}l.i=c}return D(v,0,u+T(y)+h)},B=function(){for(var t=new Int32Array(256),n=0;n<256;++n){for(var r=n,e=9;--e;)r=(1&r&&-306674912)^r>>>1;t[n]=r}return t}(),Y=function(){var t=-1;return{p:function(n){for(var r=t,e=0;e<n.length;++e)r=B[255&r^n[e]]^r>>>8;t=r},d:function(){return~t}}},J=function(){var t=1,n=0;return{p:function(r){for(var e=t,i=n,o=0|r.length,s=0;s!=o;){for(var a=Math.min(s+2655,o);s<a;++s)i+=e+=r[s];e=(65535&e)+15*(e>>16),i=(65535&i)+15*(i>>16)}t=e,n=i},d:function(){return(255&(t%=65521))<<24|(65280&t)<<8|(255&(n%=65521))<<8|n>>8}}},K=function(t,r,e,i,o){if(!o&&(o={l:1},r.dictionary)){var s=r.dictionary.subarray(-32768),a=new n(s.length+t.length);a.set(s),a.set(t,s.length),t=a,o.w=s.length}return P(t,null==r.level?6:r.level,null==r.mem?o.l?Math.ceil(1.5*Math.max(8,Math.min(13,Math.log(t.length)))):20:12+r.mem,e,i,o)},Q=function(t,n){var r={};for(var e in t)r[e]=t[e];for(var e in n)r[e]=n[e];return r},R=function(t,n,r){for(var e=t(),i=""+t,o=i.slice(i.indexOf("[")+1,i.lastIndexOf("]")).replace(/\s+/g,"").split(","),s=0;s<e.length;++s){var a=e[s],u=o[s];if("function"==typeof a){n+=";"+u+"=";var h=""+a;if(a.prototype)if(-1!=h.indexOf("[native code]")){var f=h.indexOf(" ",8)+1;n+=h.slice(f,h.indexOf("(",f))}else for(var l in n+=h,a.prototype)n+=";"+u+".prototype."+l+"="+a.prototype[l];else n+=h}else r[u]=a}return n},V=[],W=function(t){var n=[];for(var r in t)t[r].buffer&&n.push((t[r]=new t[r].constructor(t[r])).buffer);return n},X=function(n,r,e,i){if(!V[e]){for(var o="",s={},a=n.length-1,u=0;u<a;++u)o=R(n[u],o,s);V[e]={c:R(n[a],o,s),e:s}}var h=Q({},V[e].e);return(0,t.default)(V[e].c+";onmessage=function(e){for(var k in e.data)self[k]=e.data[k];onmessage="+r+"}",e,h,W(h),i)},$=function(){return[n,r,e,i,o,s,h,c,x,k,v,C,y,M,S,A,T,D,I,U,Tt,it,ot]},_=function(){return[n,r,e,i,o,s,f,p,w,m,z,b,v,j,N,y,F,E,Z,q,O,G,L,H,T,D,P,K,kt,it]},tt=function(){return[pt,gt,ct,Y,B]},nt=function(){return[vt,dt]},rt=function(){return[yt,ct,J]},et=function(){return[mt]},it=function(t){return postMessage(t,[t.buffer])},ot=function(t){return t&&{out:t.size&&new n(t.size),dictionary:t.dictionary}},st=function(t,n,r,e,i,o){var s=X(r,e,i,(function(t,n){s.terminate(),o(t,n)}));return s.postMessage([t,n],n.consume?[t.buffer]:[]),function(){s.terminate()}},at=function(t){return t.ondata=function(t,n){return postMessage([t,n],[t.buffer])},function(n){n.data.length?(t.push(n.data[0],n.data[1]),postMessage([n.data[0].length])):t.flush()}},ut=function(t,n,r,e,i,o,s){var a,u=X(t,e,i,(function(t,r){t?(u.terminate(),n.ondata.call(n,t)):Array.isArray(r)?1==r.length?(n.queuedSize-=r[0],n.ondrain&&n.ondrain(r[0])):(r[1]&&u.terminate(),n.ondata.call(n,t,r[0],r[1])):s(r)}));u.postMessage(r),n.queuedSize=0,n.push=function(t,r){n.ondata||I(5),a&&n.ondata(I(4,0,1),null,!!r),n.queuedSize+=t.length,u.postMessage([t,a=r],[t.buffer])},n.terminate=function(){u.terminate()},o&&(n.flush=function(){u.postMessage([])})},ht=function(t,n){return t[n]|t[n+1]<<8},ft=function(t,n){return(t[n]|t[n+1]<<8|t[n+2]<<16|t[n+3]<<24)>>>0},lt=function(t,n){return ft(t,n)+4294967296*ft(t,n+4)},ct=function(t,n,r){for(;r;++n)t[n]=r,r>>>=8},pt=function(t,n){var r=n.filename;if(t[0]=31,t[1]=139,t[2]=8,t[8]=n.level<2?4:9==n.level?2:0,t[9]=3,0!=n.mtime&&ct(t,4,Math.floor(new Date(n.mtime||Date.now())/1e3)),r){t[3]=8;for(var e=0;e<=r.length;++e)t[e+10]=r.charCodeAt(e)}},vt=function(t){31==t[0]&&139==t[1]&&8==t[2]||I(6,"invalid gzip data");var n=t[3],r=10;4&n&&(r+=2+(t[10]|t[11]<<8));for(var e=(n>>3&1)+(n>>4&1);e>0;e-=!t[r++]);return r+(2&n)},dt=function(t){var n=t.length;return(t[n-4]|t[n-3]<<8|t[n-2]<<16|t[n-1]<<24)>>>0},gt=function(t){return 10+(t.filename?t.filename.length+1:0)},yt=function(t,n){var r=n.level,e=0==r?0:r<6?1:9==r?3:2;if(t[0]=120,t[1]=e<<6|(n.dictionary&&32),t[1]|=31-(t[0]<<8|t[1])%31,n.dictionary){var i=J();i.p(n.dictionary),ct(t,2,i.d())}},mt=function(t,n){return(8!=(15&t[0])||t[0]>>4>7||(t[0]<<8|t[1])%31)&&I(6,"invalid zlib data"),(t[1]>>5&1)==+!n&&I(6,"invalid zlib data: "+(32&t[1]?"need":"unexpected")+" dictionary"),2+(t[1]>>3&4)};function bt(t,n){return"function"==typeof t&&(n=t,t={}),this.ondata=n,t}var wt=function(){function t(t,r){if("function"==typeof t&&(r=t,t={}),this.ondata=r,this.o=t||{},this.s={l:0,i:32768,w:32768,z:32768},this.b=new n(98304),this.o.dictionary){var e=this.o.dictionary.subarray(-32768);this.b.set(e,32768-e.length),this.s.i=32768-e.length}}return t.prototype.p=function(t,n){this.ondata(K(t,this.o,0,0,this.s),n)},t.prototype.push=function(t,r){this.ondata||I(5),this.s.l&&I(4);var e=t.length+this.s.z;if(e>this.b.length){if(e>2*this.b.length-32768){var i=new n(-32768&e);i.set(this.b.subarray(0,this.s.z)),this.b=i}var o=this.b.length-this.s.z;this.b.set(t.subarray(0,o),this.s.z),this.s.z=this.b.length,this.p(this.b,!1),this.b.set(this.b.subarray(-32768)),this.b.set(t.subarray(o),32768),this.s.z=t.length-o+32768,this.s.i=32766,this.s.w=32768}else this.b.set(t,this.s.z),this.s.z+=t.length;this.s.l=1&r,(this.s.z>this.s.w+8191||r)&&(this.p(this.b,r||!1),this.s.w=this.s.i,this.s.i-=2)},t.prototype.flush=function(){this.ondata||I(5),this.s.l&&I(4),this.p(this.b,!1),this.s.w=this.s.i,this.s.i-=2},t}();_e.Deflate=wt;var xt=function(){return function(t,n){ut([_,function(){return[at,wt]}],this,bt.call(this,t,n),(function(t){var n=new wt(t.data);onmessage=at(n)}),6,1)}}();function zt(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[_],(function(t){return it(kt(t.data[0],t.data[1]))}),0,r)}function kt(t,n){return K(t,n||{},0,0)}_e.AsyncDeflate=xt,_e.deflate=zt,_e.deflateSync=kt;var Mt=function(){function t(t,r){"function"==typeof t&&(r=t,t={}),this.ondata=r;var e=t&&t.dictionary&&t.dictionary.subarray(-32768);this.s={i:0,b:e?e.length:0},this.o=new n(32768),this.p=new n(0),e&&this.o.set(e)}return t.prototype.e=function(t){if(this.ondata||I(5),this.d&&I(4),this.p.length){if(t.length){var r=new n(this.p.length+t.length);r.set(this.p),r.set(t,this.p.length),this.p=r}}else this.p=t},t.prototype.c=function(t){this.s.i=+(this.d=t||!1);var n=this.s.b,r=U(this.p,this.s,this.o);this.ondata(D(r,n,this.s.b),this.d),this.o=D(r,this.s.b-32768),this.s.b=this.o.length,this.p=D(this.p,this.s.p/8|0),this.s.p&=7},t.prototype.push=function(t,n){this.e(t),this.c(n)},t}();_e.Inflate=Mt;var St=function(){return function(t,n){ut([$,function(){return[at,Mt]}],this,bt.call(this,t,n),(function(t){var n=new Mt(t.data);onmessage=at(n)}),7,0)}}();function At(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[$],(function(t){return it(Tt(t.data[0],ot(t.data[1])))}),1,r)}function Tt(t,n){return U(t,{i:2},n&&n.out,n&&n.dictionary)}_e.AsyncInflate=St,_e.inflate=At,_e.inflateSync=Tt;var Dt=function(){function t(t,n){this.c=Y(),this.l=0,this.v=1,wt.call(this,t,n)}return t.prototype.push=function(t,n){this.c.p(t),this.l+=t.length,wt.prototype.push.call(this,t,n)},t.prototype.p=function(t,n){var r=K(t,this.o,this.v&&gt(this.o),n&&8,this.s);this.v&&(pt(r,this.o),this.v=0),n&&(ct(r,r.length-8,this.c.d()),ct(r,r.length-4,this.l)),this.ondata(r,n)},t.prototype.flush=function(){wt.prototype.flush.call(this)},t}();_e.Gzip=Dt,_e.Compress=Dt;var Ct=function(){return function(t,n){ut([_,tt,function(){return[at,wt,Dt]}],this,bt.call(this,t,n),(function(t){var n=new Dt(t.data);onmessage=at(n)}),8,1)}}();function It(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[_,tt,function(){return[Ut]}],(function(t){return it(Ut(t.data[0],t.data[1]))}),2,r)}function Ut(t,n){n||(n={});var r=Y(),e=t.length;r.p(t);var i=K(t,n,gt(n),8),o=i.length;return pt(i,n),ct(i,o-8,r.d()),ct(i,o-4,e),i}_e.AsyncGzip=Ct,_e.AsyncCompress=Ct,_e.gzip=It,_e.compress=It,_e.gzipSync=Ut,_e.compressSync=Ut;var Ft=function(){function t(t,n){this.v=1,this.r=0,Mt.call(this,t,n)}return t.prototype.push=function(t,r){if(Mt.prototype.e.call(this,t),this.r+=t.length,this.v){var e=this.p.subarray(this.v-1),i=e.length>3?vt(e):4;if(i>e.length){if(!r)return}else this.v>1&&this.onmember&&this.onmember(this.r-e.length);this.p=e.subarray(i),this.v=0}Mt.prototype.c.call(this,r),!this.s.f||this.s.l||r||(this.v=T(this.s.p)+9,this.s={i:0},this.o=new n(0),this.push(new n(0),r))},t}();_e.Gunzip=Ft;var Et=function(){return function(t,n){var r=this;ut([$,nt,function(){return[at,Mt,Ft]}],this,bt.call(this,t,n),(function(t){var n=new Ft(t.data);n.onmember=function(t){return postMessage(t)},onmessage=at(n)}),9,0,(function(t){return r.onmember&&r.onmember(t)}))}}();function Zt(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[$,nt,function(){return[qt]}],(function(t){return it(qt(t.data[0],t.data[1]))}),3,r)}function qt(t,r){var e=vt(t);return e+8>t.length&&I(6,"invalid gzip data"),U(t.subarray(e,-8),{i:2},r&&r.out||new n(dt(t)),r&&r.dictionary)}_e.AsyncGunzip=Et,_e.gunzip=Zt,_e.gunzipSync=qt;var Ot=function(){function t(t,n){this.c=J(),this.v=1,wt.call(this,t,n)}return t.prototype.push=function(t,n){this.c.p(t),wt.prototype.push.call(this,t,n)},t.prototype.p=function(t,n){var r=K(t,this.o,this.v&&(this.o.dictionary?6:2),n&&4,this.s);this.v&&(yt(r,this.o),this.v=0),n&&ct(r,r.length-4,this.c.d()),this.ondata(r,n)},t.prototype.flush=function(){wt.prototype.flush.call(this)},t}();_e.Zlib=Ot;var Gt=function(){return function(t,n){ut([_,rt,function(){return[at,wt,Ot]}],this,bt.call(this,t,n),(function(t){var n=new Ot(t.data);onmessage=at(n)}),10,1)}}();function Lt(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[_,rt,function(){return[Ht]}],(function(t){return it(Ht(t.data[0],t.data[1]))}),4,r)}function Ht(t,n){n||(n={});var r=J();r.p(t);var e=K(t,n,n.dictionary?6:2,4);return yt(e,n),ct(e,e.length-4,r.d()),e}_e.AsyncZlib=Gt,_e.zlib=Lt,_e.zlibSync=Ht;var jt=function(){function t(t,n){Mt.call(this,t,n),this.v=t&&t.dictionary?2:1}return t.prototype.push=function(t,n){if(Mt.prototype.e.call(this,t),this.v){if(this.p.length<6&&!n)return;this.p=this.p.subarray(mt(this.p,this.v-1)),this.v=0}n&&(this.p.length<4&&I(6,"invalid zlib data"),this.p=this.p.subarray(0,-4)),Mt.prototype.c.call(this,n)},t}();_e.Unzlib=jt;var Nt=function(){return function(t,n){ut([$,et,function(){return[at,Mt,jt]}],this,bt.call(this,t,n),(function(t){var n=new jt(t.data);onmessage=at(n)}),11,0)}}();function Pt(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),st(t,n,[$,et,function(){return[Bt]}],(function(t){return it(Bt(t.data[0],ot(t.data[1])))}),5,r)}function Bt(t,n){return U(t.subarray(mt(t,n&&n.dictionary),-4),{i:2},n&&n.out,n&&n.dictionary)}_e.AsyncUnzlib=Nt,_e.unzlib=Pt,_e.unzlibSync=Bt;var Yt=function(){function t(t,n){this.o=bt.call(this,t,n)||{},this.G=Ft,this.I=Mt,this.Z=jt}return t.prototype.i=function(){var t=this;this.s.ondata=function(n,r){t.ondata(n,r)}},t.prototype.push=function(t,r){if(this.ondata||I(5),this.s)this.s.push(t,r);else{if(this.p&&this.p.length){var e=new n(this.p.length+t.length);e.set(this.p),e.set(t,this.p.length)}else this.p=t;this.p.length>2&&(this.s=31==this.p[0]&&139==this.p[1]&&8==this.p[2]?new this.G(this.o):8!=(15&this.p[0])||this.p[0]>>4>7||(this.p[0]<<8|this.p[1])%31?new this.I(this.o):new this.Z(this.o),this.i(),this.s.push(this.p,r),this.p=null)}},t}();_e.Decompress=Yt;var Jt=function(){function t(t,n){Yt.call(this,t,n),this.queuedSize=0,this.G=Et,this.I=St,this.Z=Nt}return t.prototype.i=function(){var t=this;this.s.ondata=function(n,r,e){t.ondata(n,r,e)},this.s.ondrain=function(n){t.queuedSize-=n,t.ondrain&&t.ondrain(n)}},t.prototype.push=function(t,n){this.queuedSize+=t.length,Yt.prototype.push.call(this,t,n)},t}();function Kt(t,n,r){return r||(r=n,n={}),"function"!=typeof r&&I(7),31==t[0]&&139==t[1]&&8==t[2]?Zt(t,n,r):8!=(15&t[0])||t[0]>>4>7||(t[0]<<8|t[1])%31?At(t,n,r):Pt(t,n,r)}function Qt(t,n){return 31==t[0]&&139==t[1]&&8==t[2]?qt(t,n):8!=(15&t[0])||t[0]>>4>7||(t[0]<<8|t[1])%31?Tt(t,n):Bt(t,n)}_e.AsyncDecompress=Jt,_e.decompress=Kt,_e.decompressSync=Qt;var Rt=function(t,r,e,i){for(var o in t){var s=t[o],a=r+o,u=i;Array.isArray(s)&&(u=Q(i,s[1]),s=s[0]),s instanceof n?e[a]=[s,u]:(e[a+="/"]=[new n(0),u],Rt(s,a,e,i))}},Vt="undefined"!=typeof TextEncoder&&new TextEncoder,Wt="undefined"!=typeof TextDecoder&&new TextDecoder,Xt=0;try{Wt.decode(N,{stream:!0}),Xt=1}catch(t){}var $t=function(t){for(var n="",r=0;;){var e=t[r++],i=(e>127)+(e>223)+(e>239);if(r+i>t.length)return{s:n,r:D(t,r-1)};i?3==i?(e=((15&e)<<18|(63&t[r++])<<12|(63&t[r++])<<6|63&t[r++])-65536,n+=String.fromCharCode(55296|e>>10,56320|1023&e)):n+=String.fromCharCode(1&i?(31&e)<<6|63&t[r++]:(15&e)<<12|(63&t[r++])<<6|63&t[r++]):n+=String.fromCharCode(e)}},_t=function(){function t(t){this.ondata=t,Xt?this.t=new TextDecoder:this.p=N}return t.prototype.push=function(t,r){if(this.ondata||I(5),r=!!r,this.t)return this.ondata(this.t.decode(t,{stream:!0}),r),void(r&&(this.t.decode().length&&I(8),this.t=null));this.p||I(4);var e=new n(this.p.length+t.length);e.set(this.p),e.set(t,this.p.length);var i=$t(e),o=i.s,s=i.r;r?(s.length&&I(8),this.p=null):this.p=s,this.ondata(o,r)},t}();_e.DecodeUTF8=_t;var tn=function(){function t(t){this.ondata=t}return t.prototype.push=function(t,n){this.ondata||I(5),this.d&&I(4),this.ondata(nn(t),this.d=n||!1)},t}();function nn(t,r){if(r){for(var e=new n(t.length),i=0;i<t.length;++i)e[i]=t.charCodeAt(i);return e}if(Vt)return Vt.encode(t);var o=t.length,s=new n(t.length+(t.length>>1)),a=0,u=function(t){s[a++]=t};for(i=0;i<o;++i){if(a+5>s.length){var h=new n(a+8+(o-i<<1));h.set(s),s=h}var f=t.charCodeAt(i);f<128||r?u(f):f<2048?(u(192|f>>6),u(128|63&f)):f>55295&&f<57344?(u(240|(f=65536+(1047552&f)|1023&t.charCodeAt(++i))>>18),u(128|f>>12&63),u(128|f>>6&63),u(128|63&f)):(u(224|f>>12),u(128|f>>6&63),u(128|63&f))}return D(s,0,a)}function rn(t,n){if(n){for(var r="",e=0;e<t.length;e+=16384)r+=String.fromCharCode.apply(null,t.subarray(e,e+16384));return r}if(Wt)return Wt.decode(t);var i=$t(t),o=i.s;return(r=i.r).length&&I(8),o}_e.EncodeUTF8=tn,_e.strToU8=nn,_e.strFromU8=rn;var en=function(t){return 1==t?3:t<6?2:9==t?1:0},on=function(t,n){return n+30+ht(t,n+26)+ht(t,n+28)},sn=function(t,n,r){var e=ht(t,n+28),i=rn(t.subarray(n+46,n+46+e),!(2048&ht(t,n+8))),o=n+46+e,s=ft(t,n+20),a=r&&4294967295==s?an(t,o):[s,ft(t,n+24),ft(t,n+42)],u=a[0],h=a[1],f=a[2];return[ht(t,n+10),u,h,i,o+ht(t,n+30)+ht(t,n+32),f]},an=function(t,n){for(;1!=ht(t,n);n+=4+ht(t,n+2));return[lt(t,n+12),lt(t,n+4),lt(t,n+20)]},un=function(t){var n=0;if(t)for(var r in t){var e=t[r].length;e>65535&&I(9),n+=e+4}return n},hn=function(t,n,r,e,i,o,s,a){var u=e.length,h=r.extra,f=a&&a.length,l=un(h);ct(t,n,null!=s?33639248:67324752),n+=4,null!=s&&(t[n++]=20,t[n++]=r.os),t[n]=20,n+=2,t[n++]=r.flag<<1|(o<0&&8),t[n++]=i&&8,t[n++]=255&r.compression,t[n++]=r.compression>>8;var c=new Date(null==r.mtime?Date.now():r.mtime),p=c.getFullYear()-1980;if((p<0||p>119)&&I(10),ct(t,n,p<<25|c.getMonth()+1<<21|c.getDate()<<16|c.getHours()<<11|c.getMinutes()<<5|c.getSeconds()>>1),n+=4,-1!=o&&(ct(t,n,r.crc),ct(t,n+4,o<0?-o-2:o),ct(t,n+8,r.size)),ct(t,n+12,u),ct(t,n+14,l),n+=16,null!=s&&(ct(t,n,f),ct(t,n+6,r.attrs),ct(t,n+10,s),n+=14),t.set(e,n),n+=u,l)for(var v in h){var d=h[v],g=d.length;ct(t,n,+v),ct(t,n+2,g),t.set(d,n+4),n+=4+g}return f&&(t.set(a,n),n+=f),n},fn=function(t,n,r,e,i){ct(t,n,101010256),ct(t,n+8,r),ct(t,n+10,r),ct(t,n+12,e),ct(t,n+16,i)},ln=function(){function t(t){this.filename=t,this.c=Y(),this.size=0,this.compression=0}return t.prototype.process=function(t,n){this.ondata(null,t,n)},t.prototype.push=function(t,n){this.ondata||I(5),this.c.p(t),this.size+=t.length,n&&(this.crc=this.c.d()),this.process(t,n||!1)},t}();_e.ZipPassThrough=ln;var cn=function(){function t(t,n){var r=this;n||(n={}),ln.call(this,t),this.d=new wt(n,(function(t,n){r.ondata(null,t,n)})),this.compression=8,this.flag=en(n.level)}return t.prototype.process=function(t,n){try{this.d.push(t,n)}catch(t){this.ondata(t,null,n)}},t.prototype.push=function(t,n){ln.prototype.push.call(this,t,n)},t}();_e.ZipDeflate=cn;var pn=function(){function t(t,n){var r=this;n||(n={}),ln.call(this,t),this.d=new xt(n,(function(t,n,e){r.ondata(t,n,e)})),this.compression=8,this.flag=en(n.level),this.terminate=this.d.terminate}return t.prototype.process=function(t,n){this.d.push(t,n)},t.prototype.push=function(t,n){ln.prototype.push.call(this,t,n)},t}();_e.AsyncZipDeflate=pn;var vn=function(){function t(t){this.ondata=t,this.u=[],this.d=1}return t.prototype.add=function(t){var r=this;if(this.ondata||I(5),2&this.d)this.ondata(I(4+8*(1&this.d),0,1),null,!1);else{var e=nn(t.filename),i=e.length,o=t.comment,s=o&&nn(o),a=i!=t.filename.length||s&&o.length!=s.length,u=i+un(t.extra)+30;i>65535&&this.ondata(I(11,0,1),null,!1);var h=new n(u);hn(h,0,t,e,a,-1);var f=[h],l=function(){for(var t=0,n=f;t<n.length;t++)r.ondata(null,n[t],!1);f=[]},c=this.d;this.d=0;var p=this.u.length,v=Q(t,{f:e,u:a,o:s,t:function(){t.terminate&&t.terminate()},r:function(){if(l(),c){var t=r.u[p+1];t?t.r():r.d=1}c=1}}),d=0;t.ondata=function(e,i,o){if(e)r.ondata(e,i,o),r.terminate();else if(d+=i.length,f.push(i),o){var s=new n(16);ct(s,0,134695760),ct(s,4,t.crc),ct(s,8,d),ct(s,12,t.size),f.push(s),v.c=d,v.b=u+d+16,v.crc=t.crc,v.size=t.size,c&&v.r(),c=1}else c&&l()},this.u.push(v)}},t.prototype.end=function(){var t=this;2&this.d?this.ondata(I(4+8*(1&this.d),0,1),null,!0):(this.d?this.e():this.u.push({r:function(){1&t.d&&(t.u.splice(-1,1),t.e())},t:function(){}}),this.d=3)},t.prototype.e=function(){for(var t=0,r=0,e=0,i=0,o=this.u;i<o.length;i++)e+=46+(h=o[i]).f.length+un(h.extra)+(h.o?h.o.length:0);for(var s=new n(e+22),a=0,u=this.u;a<u.length;a++){var h;hn(s,t,h=u[a],h.f,h.u,-h.c-2,r,h.o),t+=46+h.f.length+un(h.extra)+(h.o?h.o.length:0),r+=h.b}fn(s,t,this.u.length,e,r),this.ondata(null,s,!0),this.d=2},t.prototype.terminate=function(){for(var t=0,n=this.u;t<n.length;t++)n[t].t();this.d=2},t}();function dn(t,r,e){e||(e=r,r={}),"function"!=typeof e&&I(7);var i={};Rt(t,"",i,r);var o=Object.keys(i),s=o.length,a=0,u=0,h=s,f=Array(s),l=[],c=function(){for(var t=0;t<l.length;++t)l[t]()},p=function(t,n){xn((function(){e(t,n)}))};xn((function(){p=e}));var v=function(){var t=new n(u+22),r=a,e=u-a;u=0;for(var i=0;i<h;++i){var o=f[i];try{var s=o.c.length;hn(t,u,o,o.f,o.u,s);var l=30+o.f.length+un(o.extra),c=u+l;t.set(o.c,c),hn(t,a,o,o.f,o.u,s,u,o.m),a+=16+l+(o.m?o.m.length:0),u=c+s}catch(t){return p(t,null)}}fn(t,a,f.length,e,r),p(null,t)};s||v();for(var d=function(t){var n=o[t],r=i[n],e=r[0],h=r[1],d=Y(),g=e.length;d.p(e);var y=nn(n),m=y.length,b=h.comment,w=b&&nn(b),x=w&&w.length,z=un(h.extra),k=0==h.level?0:8,M=function(r,e){if(r)c(),p(r,null);else{var i=e.length;f[t]=Q(h,{size:g,crc:d.d(),c:e,f:y,m:w,u:m!=n.length||w&&b.length!=x,compression:k}),a+=30+m+z+i,u+=76+2*(m+z)+(x||0)+i,--s||v()}};if(m>65535&&M(I(11,0,1),null),k)if(g<16e4)try{M(null,kt(e,h))}catch(t){M(t,null)}else l.push(zt(e,h,M));else M(null,e)},g=0;g<h;++g)d(g);return c}function gn(t,r){r||(r={});var e={},i=[];Rt(t,"",e,r);var o=0,s=0;for(var a in e){var u=e[a],h=u[0],f=u[1],l=0==f.level?0:8,c=(M=nn(a)).length,p=f.comment,v=p&&nn(p),d=v&&v.length,g=un(f.extra);c>65535&&I(11);var y=l?kt(h,f):h,m=y.length,b=Y();b.p(h),i.push(Q(f,{size:h.length,crc:b.d(),c:y,f:M,m:v,u:c!=a.length||v&&p.length!=d,o:o,compression:l})),o+=30+c+g+m,s+=76+2*(c+g)+(d||0)+m}for(var w=new n(s+22),x=o,z=s-o,k=0;k<i.length;++k){var M;hn(w,(M=i[k]).o,M,M.f,M.u,M.c.length);var S=30+M.f.length+un(M.extra);w.set(M.c,M.o+S),hn(w,o,M,M.f,M.u,M.c.length,M.o,M.m),o+=16+S+(M.m?M.m.length:0)}return fn(w,o,i.length,z,x),w}_e.Zip=vn,_e.zip=dn,_e.zipSync=gn;var yn=function(){function t(){}return t.prototype.push=function(t,n){this.ondata(null,t,n)},t.compression=0,t}();_e.UnzipPassThrough=yn;var mn=function(){function t(){var t=this;this.i=new Mt((function(n,r){t.ondata(null,n,r)}))}return t.prototype.push=function(t,n){try{this.i.push(t,n)}catch(t){this.ondata(t,null,n)}},t.compression=8,t}();_e.UnzipInflate=mn;var bn=function(){function t(t,n){var r=this;n<32e4?this.i=new Mt((function(t,n){r.ondata(null,t,n)})):(this.i=new St((function(t,n,e){r.ondata(t,n,e)})),this.terminate=this.i.terminate)}return t.prototype.push=function(t,n){this.i.terminate&&(t=D(t,0)),this.i.push(t,n)},t.compression=8,t}();_e.AsyncUnzipInflate=bn;var wn=function(){function t(t){this.onfile=t,this.k=[],this.o={0:yn},this.p=N}return t.prototype.push=function(t,r){var e=this;if(this.onfile||I(5),this.p||I(4),this.c>0){var i=Math.min(this.c,t.length),o=t.subarray(0,i);if(this.c-=i,this.d?this.d.push(o,!this.c):this.k[0].push(o),(t=t.subarray(i)).length)return this.push(t,r)}else{var s=0,a=0,u=void 0,h=void 0;this.p.length?t.length?((h=new n(this.p.length+t.length)).set(this.p),h.set(t,this.p.length)):h=this.p:h=t;for(var f=h.length,l=this.c,c=l&&this.d,p=function(){var t,n=ft(h,a);if(67324752==n){s=1,u=a,v.d=null,v.c=0;var r=ht(h,a+6),i=ht(h,a+8),o=2048&r,c=8&r,p=ht(h,a+26),d=ht(h,a+28);if(f>a+30+p+d){var g=[];v.k.unshift(g),s=2;var y,m=ft(h,a+18),b=ft(h,a+22),w=rn(h.subarray(a+30,a+=30+p),!o);4294967295==m?(t=c?[-2]:an(h,a),m=t[0],b=t[1]):c&&(m=-1),a+=d,v.c=m;var x={name:w,compression:i,start:function(){if(x.ondata||I(5),m){var t=e.o[i];t||x.ondata(I(14,"unknown compression type "+i,1),null,!1),(y=m<0?new t(w):new t(w,m,b)).ondata=function(t,n,r){x.ondata(t,n,r)};for(var n=0,r=g;n<r.length;n++)y.push(r[n],!1);e.k[0]==g&&e.c?e.d=y:y.push(N,!0)}else x.ondata(null,N,!0)},terminate:function(){y&&y.terminate&&y.terminate()}};m>=0&&(x.size=m,x.originalSize=b),v.onfile(x)}return"break"}if(l){if(134695760==n)return u=a+=12+(-2==l&&8),s=3,v.c=0,"break";if(33639248==n)return u=a-=4,s=3,v.c=0,"break"}},v=this;a<f-4&&"break"!==p();++a);if(this.p=N,l<0){var d=h.subarray(0,s?u-12-(-2==l&&8)-(134695760==ft(h,u-16)&&4):a);c?c.push(d,!!s):this.k[+(2==s)].push(d)}if(2&s)return this.push(h.subarray(a),r);this.p=h.subarray(a)}r&&(this.c&&I(13),this.p=null)},t.prototype.register=function(t){this.o[t.compression]=t},t}();_e.Unzip=wn;var xn="function"==typeof queueMicrotask?queueMicrotask:"function"==typeof setTimeout?setTimeout:function(t){t()};function zn(t,r,e){e||(e=r,r={}),"function"!=typeof e&&I(7);var i=[],o=function(){for(var t=0;t<i.length;++t)i[t]()},s={},a=function(t,n){xn((function(){e(t,n)}))};xn((function(){a=e}));for(var u=t.length-22;101010256!=ft(t,u);--u)if(!u||t.length-u>65558)return a(I(13,0,1),null),o;var h=ht(t,u+8);if(h){var f=h,l=ft(t,u+16),c=4294967295==l||65535==f;if(c){var p=ft(t,u-12);(c=101075792==ft(t,p))&&(f=h=ft(t,p+32),l=ft(t,p+48))}for(var v=r&&r.filter,d=function(r){var e=sn(t,l,c),u=e[0],f=e[1],p=e[2],d=e[3],g=e[4],y=on(t,e[5]);l=g;var m=function(t,n){t?(o(),a(t,null)):(n&&(s[d]=n),--h||a(null,s))};if(!v||v({name:d,size:f,originalSize:p,compression:u}))if(u)if(8==u){var b=t.subarray(y,y+f);if(p<524288||f>.8*p)try{m(null,Tt(b,{out:new n(p)}))}catch(t){m(t,null)}else i.push(At(b,{size:p},m))}else m(I(14,"unknown compression type "+u,1),null);else m(null,D(t,y,y+f));else m(null,null)},g=0;g<f;++g)d()}else a(null,{});return o}function kn(t,r){for(var e={},i=t.length-22;101010256!=ft(t,i);--i)(!i||t.length-i>65558)&&I(13);var o=ht(t,i+8);if(!o)return{};var s=ft(t,i+16),a=4294967295==s||65535==o;if(a){var u=ft(t,i-12);(a=101075792==ft(t,u))&&(o=ft(t,u+32),s=ft(t,u+48))}for(var h=r&&r.filter,f=0;f<o;++f){var l=sn(t,s,a),c=l[0],p=l[1],v=l[2],d=l[3],g=l[4],y=on(t,l[5]);s=g,h&&!h({name:d,size:p,originalSize:v,compression:c})||(c?8==c?e[d]=Tt(t.subarray(y,y+p),{out:new n(v)}):I(14,"unknown compression type "+c):e[d]=D(t,y,y+p))}return e}_e.unzip=zn,_e.unzipSync=kn;return _e});
+</script>
+<script>
+/* ============================================================
+   카카오톡 파싱 — 타래 뽑기 본체와 동일한 로직 (그대로 사용)
+   ============================================================ */
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function toWebTimestamp(str) {
+    if (!str) return "";
+    const s = str.trim();
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (iso) {
+        if (iso[4] === undefined) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+        return `${iso[1]}-${iso[2]}-${iso[3]}T${pad2(iso[4])}:${iso[5]}:${iso[6] ? iso[6] : '00'}`;
+    }
+    const m = s.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})(?:\s*(오전|오후)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if (!m) return s;
+    const datePart = `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+    if (m[5] === undefined) return datePart;
+    let hour = +m[5];
+    if (m[4] === '오후' && hour < 12) hour += 12;
+    if (m[4] === '오전' && hour === 12) hour = 0;
+    const sec = m[7] ? m[7] : '00';
+    return `${datePart}T${pad2(hour)}:${m[6]}:${sec}`;
+}
+
+// 본체와 동일한 정규식 세트
+const RX = {
+    mobileHeader: /^(\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*(?:오전|오후)\s*\d{1,2}:\d{2}),\s*([^:]+?)\s*:\s*(.*)$/,
+    iosHeader:    /^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(?:(오전|오후)\s*)?(\d{1,2}):(\d{2}),\s*([^:]+?)\s*:\s*(.*)$/,
+    iosSystem:    /^\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.\s*(?:(?:오전|오후)\s*)?\d{1,2}:\d{2}:\s/,
+    pcHeader:     /^\[([^\]]+)\]\s*\[((?:오전|오후)\s*\d{1,2}:\d{2})\]\s*(.*)$/,
+    system:       /님이 (들어왔습니다|나갔습니다)\.?\s*$/,
+    titleOrSaved: /님과 카카오톡 대화\s*$|^저장한 날짜\s*[:：]/,
+};
+
+function tryExtractDividerDate(trimmed) {
+    const patterns = [
+        /^-{3,}\s*(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일[^-]*-{3,}$/,
+        /^(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*(?:오전|오후)\s*\d{1,2}:\d{2}\s*$/,
+        /^(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*[가-힣]*요일?\s*$/,
+    ];
+    for (const re of patterns) {
+        const m = trimmed.match(re);
+        if (m) return `${m[1]}. ${m[2]}. ${m[3]}`;
+    }
+    return null;
+}
+
+// 파싱 + 줄별 판정 기록(검사용). rows 와 lineKinds 를 함께 돌려준다.
+function parseKakao(text) {
+    const rawLines = text.split(/\r\n|\r|\n/);
+    const lineKinds = [];
+    function to12h(hour24, min) {
+        const ampm = hour24 < 12 ? '오전' : '오후';
+        let h = hour24 % 12; if (h === 0) h = 12;
+        return `${ampm} ${h}:${min}`;
+    }
+
+    let current = null, currentDate = '';
+    const rawRows = [];
+    function flush() {
+        if (current) {
+            const content = current.contentLines.join('\n').trim();
+            if (content !== '') rawRows.push({ name: current.name, id: "id_" + current.name, time: current.time, content, pfp: "" });
+        }
+        current = null;
+    }
+
+    rawLines.forEach((rawLine, i) => {
+        const line = rawLine.replace(/\r$/, '');
+        const trimmed = line.trim();
+
+        if (trimmed === '') { lineKinds.push({ i, line, kind: 'blank' }); return; }
+
+        let m = line.match(RX.pcHeader);
+        if (m) {
+            flush();
+            const timeOnly = m[2].trim();
+            current = { name: m[1].trim(), time: currentDate ? `${currentDate} ${timeOnly}` : timeOnly, contentLines: [m[3]] };
+            lineKinds.push({ i, line, kind: 'msg', fmt: 'PC', name: m[1].trim(), body: m[3] });
+            return;
+        }
+        m = line.match(RX.iosHeader);
+        if (m) {
+            flush();
+            let hour = +m[5];
+            if (m[4]) { hour = hour % 12; if (m[4] === '오후') hour += 12; }   // 12시간제 → 24시간
+            current = { name: m[7].trim(), time: `${m[1]}. ${+m[2]}. ${+m[3]} ${to12h(hour, m[6])}`, contentLines: [m[8]] };
+            lineKinds.push({ i, line, kind: 'msg', fmt: 'iOS', name: m[7].trim(), body: m[8] });
+            return;
+        }
+        m = line.match(RX.mobileHeader);
+        if (m) {
+            flush();
+            const dm = m[1].match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*((?:오전|오후)\s*\d{1,2}:\d{2})/);
+            current = { name: m[2].trim(), time: dm ? `${dm[1]}. ${dm[2]}. ${dm[3]} ${dm[4]}` : m[1], contentLines: [m[3]] };
+            lineKinds.push({ i, line, kind: 'msg', fmt: '안드로이드', name: m[2].trim(), body: m[3] });
+            return;
+        }
+
+        // 내보내기 파일 맨 앞의 파일명 줄(Talk_....txt)도 안내 줄로 본다 — 정상 파일에서
+        // '못 읽은 줄'로 잡혀 오해를 부르기 때문. 추출 결과(행)에는 영향 없음.
+        const isTitleFilename = i < 3 && /\.txt\s*$/i.test(trimmed);
+        if (RX.system.test(trimmed) || RX.iosSystem.test(trimmed) || RX.titleOrSaved.test(trimmed) || isTitleFilename) {
+            lineKinds.push({ i, line, kind: 'system' }); return;
+        }
+        const dividerDate = tryExtractDividerDate(trimmed);
+        if (dividerDate) { currentDate = dividerDate; lineKinds.push({ i, line, kind: 'divider' }); return; }
+
+        if (current) { current.contentLines.push(line); lineKinds.push({ i, line, kind: 'cont' }); }
+        else { lineKinds.push({ i, line, kind: 'orphan' }); }
+    });
+    flush();
+
+    function getDatePart(t) { const m = t.match(/^(\d{4}\.\s*\d{1,2}\.\s*\d{1,2})/); return m ? m[1] : t; }
+    const rows = [];
+    rawRows.forEach(row => {
+        const last = rows[rows.length - 1];
+        if (last && last.name === row.name && getDatePart(last.time) === getDatePart(row.time)) {
+            last.content = last.content + '\n' + row.content;
+            last.time = row.time;
+        } else rows.push({ ...row });
+    });
+    rows.forEach(r => { r.time = toWebTimestamp(r.time); });
+    return { rows, lineKinds };
+}
+
+/* ============================================================
+   문자 검사
+   ============================================================ */
+const SUSPECT = {
+    0x200B: '제로폭 공백', 0x200C: '제로폭 비접합', 0xFEFF: '제로폭 없음표(BOM)',
+    0x00A0: '줄바꿈 없는 공백', 0x2007: '고정폭 공백', 0x202F: '좁은 고정폭 공백',
+    0xFF0E: '전각 마침표', 0xFF1A: '전각 콜론', 0xFF0C: '전각 쉼표', 0x3002: '한중일 마침표',
+    0x2024: '한자리 마침표', 0xFFFD: '깨진 문자',
+    0x200E: '왼→오 표시', 0x200F: '오→왼 표시', 0x2066: '방향 격리', 0x2069: '방향 격리 끝',
+};
+function isFullwidthDigit(cp) { return cp >= 0xFF10 && cp <= 0xFF19; }
+function suspectName(cp) {
+    if (SUSPECT[cp]) return SUSPECT[cp];
+    if (isFullwidthDigit(cp)) return '전각 숫자';
+    return null;
+}
+
+function scanSuspects(text) {
+    const found = new Map();
+    for (const ch of text) {
+        const cp = ch.codePointAt(0);
+        const nm = suspectName(cp);
+        if (nm) {
+            const key = cp;
+            if (!found.has(key)) found.set(key, { cp, name: nm, count: 0 });
+            found.get(key).count++;
+        }
+    }
+    return [...found.values()].sort((a, b) => b.count - a.count);
+}
+
+// 진단에 필요한 글자만 남기고 나머지(대화 내용)는 ●로 가린다.
+// 원칙: 진단에 쓰이는 건 줄 앞머리의 타임스탬프뿐이므로 앞 24글자 안에서만 형식 글자를 남기고,
+// 그 뒤(이름·본문)는 숫자까지 전부 가린다 — 계좌번호·전화번호가 새지 않도록.
+const KEEP_RX = /[0-9.:,\-\[\]\/() ]/;
+const KEEP_WORD = new Set([...'년월일요']);          // 오전/오후는 낱글자 말고 단어일 때만
+const INVISIBLE = new Set([0x200B, 0x200C, 0x200D, 0xFEFF, 0x00A0, 0x2007, 0x202F, 0x200E, 0x200F, 0x2066, 0x2069]);
+const MASK_HEAD = 24;
+
+// 글자별로 [글자, 보여줄지] 를 계산한다.
+function maskInfo(line, head = MASK_HEAD) {
+    const chars = [...line];
+    const keepIdx = new Set();
+    for (let i = 0; i < chars.length - 1; i++) {          // '오전' / '오후' 만 보존
+        if (chars[i] === '오' && (chars[i + 1] === '전' || chars[i + 1] === '후')) { keepIdx.add(i); keepIdx.add(i + 1); }
+    }
+    // 'AM' 'PM' 'a.m.' 등도 보존 — 단 시각 바로 뒤에 붙은 경우만(이름 속 'am' 오탐 방지)
+    for (let i = 0; i < chars.length; i++) {
+        const c = chars[i];
+        if (c !== 'A' && c !== 'a' && c !== 'P' && c !== 'p') continue;
+        let j = i + 1; const span = [i];
+        if (chars[j] === '.') { span.push(j); j++; }
+        if (chars[j] === 'M' || chars[j] === 'm') { span.push(j); j++; } else continue;
+        if (chars[j] === '.') span.push(j);
+        const before = chars.slice(Math.max(0, i - 8), i).join('');
+        if (/\d:\d{2}\s*$/.test(before)) span.forEach(k => keepIdx.add(k));
+    }
+    return chars.map((ch, i) => {
+        const cp = ch.codePointAt(0);
+        if (INVISIBLE.has(cp)) return { ch, keep: true };  // 안 보이는 문자는 내용이 아니라 원인 후보
+        const fmt = KEEP_RX.test(ch) || KEEP_WORD.has(ch) || keepIdx.has(i) || !!suspectName(cp);
+        return { ch, keep: i < head && fmt };
+    });
+}
+// 파일명 가리기 — 브라우저가 게시글 제목으로 파일명을 짓기 때문에
+// 표시이름·핸들·본문이 그대로 담긴다. 날짜와 파트번호(-1, -2)만 남기고 지운다.
+function maskFilename(name) {
+    const str = String(name || '');
+    const dot = str.lastIndexOf('.');
+    const hasExt = dot > 0 && str.length - dot <= 7;
+    const stem = hasExt ? str.slice(0, dot) : str;
+    const ext = hasExt ? str.slice(dot) : '';
+    const masked = [...stem].map(ch => /[0-9._\-]/.test(ch) ? ch : '●').join('').replace(/●+/g, '●');
+    return masked + ext;
+}
+
+function maskLine(line, head = MASK_HEAD) {
+    return maskInfo(line, head).map(o => o.keep ? o.ch : '●').join('');
+}
+
+// 한 줄을 글자별 코드포인트로 펼쳐 보여준다 (본문 글자는 가림)
+function xrayLine(line, limit = 46) {
+    const info = maskInfo(line).slice(0, limit);
+    const chips = info.map(({ ch, keep }) => {
+        if (!keep) return `<span class="chip mask" title="대화 내용 (가림)"><b>●</b>····</span>`;
+        const cp = ch.codePointAt(0);
+        const nm = suspectName(cp);
+        const hex = 'U+' + cp.toString(16).toUpperCase().padStart(4, '0');
+        let shown = ch;
+        if (cp === 0x20) shown = '␠';
+        else if (cp < 0x21 || nm) shown = '·';
+        const cls = nm ? (INVISIBLE.has(cp) ? 'chip inv' : 'chip sus') : 'chip';
+        const title = nm ? `${hex} ${nm}` : hex;
+        return `<span class="${cls}" title="${title}"><b>${escapeHtml(shown)}</b>${hex.replace('U+', '')}</span>`;
+    }).join('');
+    const more = [...line].length > limit ? `<div class="xray-line">…이하 생략</div>` : '';
+    return `<div class="chips">${chips}</div>${more}`;
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ============================================================
+   파일 검사
+   ============================================================ */
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('file');
+const report = document.getElementById('report');
+
+drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
+fileInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) handleFile(f); });
+
+function handleFile(file) {
+    report.innerHTML = '<div class="card">읽는 중…</div>';
+    const isZip = /\.zip$/i.test(file.name);
+    const isHtml = /\.html?$/i.test(file.name);
+    const reader = new FileReader();
+    reader.onload = evt => {
+        try {
+            if (isHtml) diagnoseHtml(file, evt.target.result);
+            else if (isZip) diagnoseZip(file, new Uint8Array(evt.target.result));
+            else diagnoseBytes(file, new Uint8Array(evt.target.result), null);
+        } catch (err) {
+            report.innerHTML = `<div class="card"><div class="verdict bad">파일을 여는 중 문제가 생겼습니다<span class="detail">${escapeHtml(err.message || String(err))}</span></div></div>`;
+        }
+    };
+    if (isHtml) reader.readAsText(file, 'UTF-8');
+    else reader.readAsArrayBuffer(file);
+}
+
+function diagnoseZip(file, bytes) {
+    let files;
+    try {
+        files = fflate.unzipSync(bytes);
+    } catch (err) {
+        report.innerHTML = `<div class="card">
+            <div class="verdict bad">zip을 열지 못했습니다
+            <span class="detail">파일이 중간에 끊겼거나 zip이 아닐 수 있습니다. 카카오톡에서 다시 내보내 주세요.</span></div>
+            <dl class="kv"><dt>오류</dt><dd>${escapeHtml(err.message || String(err))}</dd></dl></div>`;
+        return;
+    }
+    const all = Object.keys(files);
+    const txts = all.filter(n => /\.txt$/i.test(n)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    if (txts.length === 0) {
+        report.innerHTML = `<div class="card">
+            <div class="verdict bad">zip 안에 대화 파일(.txt)이 없습니다
+            <span class="detail">카카오톡 대화 내보내기로 만든 zip이 맞는지 확인해 주세요.</span></div>
+            <div class="sec-title">zip 안에 들어 있는 것</div>
+            <dl class="kv">${all.slice(0, 40).map(n => `<dt>파일</dt><dd>${escapeHtml(n)}</dd>`).join('')}</dl></div>`;
+        return;
+    }
+    // 파트 전부 이어붙이기 (본체와 동일)
+    // 본체와 동일하게, zip 안의 파일도 BOM 을 보고 인코딩을 정한다.
+    function decodeEntry(bytes) {
+        if (bytes[0] === 0xFF && bytes[1] === 0xFE) return new TextDecoder('utf-16le').decode(bytes);
+        if (bytes[0] === 0xFE && bytes[1] === 0xFF) return new TextDecoder('utf-16be').decode(bytes);
+        return new TextDecoder('utf-8').decode(bytes);
+    }
+    const text = txts.map(n => decodeEntry(files[n])).join('\n');
+    const merged = new TextEncoder().encode(text);
+    diagnoseBytes(file, merged, { all, txts });
+}
+
+function diagnoseBytes(file, bytes, zipInfo) {
+    // --- 인코딩 판정 ---
+    const hasUtf8Bom = bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF;
+    const utf16LE = bytes[0] === 0xFF && bytes[1] === 0xFE;
+    const utf16BE = bytes[0] === 0xFE && bytes[1] === 0xFF;
+    let nullBytes = 0;
+    for (let i = 0; i < Math.min(bytes.length, 4000); i++) if (bytes[i] === 0) nullBytes++;
+
+    let text, encodingLabel;
+    if (utf16LE || utf16BE) {
+        text = new TextDecoder(utf16LE ? 'utf-16le' : 'utf-16be').decode(bytes);
+        encodingLabel = utf16LE ? 'UTF-16 LE' : 'UTF-16 BE';
+    } else {
+        text = new TextDecoder('utf-8').decode(bytes); // 선두 BOM 자동 제거
+        encodingLabel = hasUtf8Bom ? 'UTF-8 (BOM 있음)' : 'UTF-8';
+    }
+    const broken = (text.match(/\uFFFD/g) || []).length;
+
+    // --- 줄바꿈 ---
+    const crlf = (text.match(/\r\n/g) || []).length;
+    const lfOnly = (text.match(/(?<!\r)\n/g) || []).length;
+    const crOnly = (text.match(/\r(?!\n)/g) || []).length;
+
+    // --- 파싱 ---
+    const { rows, lineKinds } = parseKakao(text);
+    const counts = { msg: 0, system: 0, divider: 0, cont: 0, orphan: 0, blank: 0 };
+    const fmts = new Set();
+    lineKinds.forEach(k => { counts[k.kind]++; if (k.fmt) fmts.add(k.fmt); });
+
+    // --- 수상한 문자 ---
+    const suspects = scanSuspects(text);
+
+    // --- 12시간제 흔적: 한글(오전/오후)이든 영문(AM/PM)이든, 시각 앞이든 뒤든 ---
+    const ampmIos = (text.match(
+        /^\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.\s*(?:(?:오전|오후)\s*\d{1,2}:\d{2}|\d{1,2}:\d{2}\s*(?:[AaPp]\.?[Mm]\.?|오전|오후))/gm
+    ) || []).length;
+    const ampmEng = (text.match(/\d{1,2}:\d{2}\s*[AaPp]\.?[Mm]\.?/g) || []).length;
+
+    // --- 우리가 아는 세 형식이 아닌데 날짜/시각처럼 보이는 줄 (다른 언어·지역 설정 의심) ---
+    const foreignish = lineKinds.filter(k => k.kind === 'orphan' && (
+        /^\d{1,4}[.\-\/]\s?\d{1,2}[.\-\/]\s?\d{1,4}/.test(k.line.trim()) ||
+        /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d/i.test(k.line.trim()) ||
+        /\d{1,2}:\d{2}\s*[AaPp]\.?[Mm]/.test(k.line)
+    )).length;
+
+    // --- 이름에 콜론 의심 ---
+    // 이름에 콜론이 있으면 그 콜론에서 잘리므로, 잘린 나머지가 내용 앞에 "B : " 꼴로 남는다.
+    const colonSuspectLines = lineKinds.filter(k =>
+        k.kind === 'msg' && /^[^\s:][^:]{0,14}?\s+:\s/.test(k.body || '')
+    ).slice(0, 3);
+    // 이름 자체에 전각 콜론이 들어간 경우는 이름칸에 그대로 남는다
+    const colonNames = [...new Set(lineKinds.filter(k => k.kind === 'msg' && /[:：]/.test(k.name || '')).map(k => k.name))];
+
+    // --- 첫 실패 줄 (내용이 있는데 메시지로도 시스템으로도 못 잡힌 줄) ---
+    const firstOrphan = lineKinds.find(k => k.kind === 'orphan');
+
+    // --- 판정 ---
+    let verdict, vclass, detail;
+    if (rows.length > 0) {
+        verdict = `대화 ${rows.length}건을 읽었습니다`; vclass = 'ok';
+        detail = '이 파일은 타래 뽑기에서도 읽히는 형식입니다. 그래도 추출이 안 된다면 아래 검사 결과를 저장해 보내 주세요.';
+    } else if (utf16LE || utf16BE) {
+        verdict = '파일이 UTF-16으로 저장되어 있습니다'; vclass = 'bad';
+        detail = '메모장이나 다른 편집기에서 다시 저장하면서 형식이 바뀐 것 같습니다. 카카오톡에서 내보낸 원본을 그대로 넣어 주세요.';
+    } else if (broken > 0 && nullBytes > 200) {
+        verdict = '파일이 UTF-16으로 저장되어 있습니다 (표시 없음)'; vclass = 'bad';
+        detail = '메모장에서 [다른 이름으로 저장]을 눌러 인코딩을 UTF-8로 바꿔 저장한 뒤 다시 넣어 주세요.';
+    } else if (broken > 0) {
+        verdict = '글자가 깨진 상태로 저장되어 있습니다'; vclass = 'bad';
+        detail = '다른 프로그램에서 저장하며 인코딩이 바뀐 것 같습니다. 원본 zip을 그대로 넣어 주세요.';
+    } else if (ampmEng > 0) {
+        verdict = '시각이 AM/PM으로 적혀 있어 읽지 못했습니다'; vclass = 'bad';
+        detail = '휴대폰 설정에서 시간 표기를 한국어(오전/오후)나 24시간제로 바꾸고 대화를 다시 내보내면 읽힙니다.';
+    } else if (foreignish > 0) {
+        verdict = '날짜와 시각 표기가 예상과 다릅니다'; vclass = 'bad';
+        detail = '휴대폰 언어·지역 설정이 한국어가 아닌 상태로 내보낸 것 같습니다. 설정을 한국어로 바꾸고 다시 내보내면 읽힙니다.';
+    } else if (suspects.length > 0) {
+        verdict = '대화를 한 건도 읽지 못했습니다'; vclass = 'bad';
+        detail = '아래 “섞여 있는 특수문자”가 원인일 가능성이 높습니다. 이 화면을 그대로 캡처해 보내 주세요.';
+    } else if (text.trim() === '') {
+        verdict = '파일 내용이 비어 있습니다'; vclass = 'bad';
+        detail = '압축을 푸는 중 파일이 만들어지지 않았을 수 있습니다. zip을 그대로 넣어 다시 확인해 주세요.';
+    } else {
+        verdict = '대화를 한 건도 읽지 못했습니다'; vclass = 'bad';
+        detail = '아래 “첫 번째로 못 읽은 줄”을 그대로 캡처해 보내 주세요. 원인을 바로 찾을 수 있습니다.';
+    }
+
+    // --- 리포트 ---
+    let html = `<div class="card">
+        <div class="verdict ${vclass}">${escapeHtml(verdict)}<span class="detail">${escapeHtml(detail)}</span></div>
+
+        <div class="sec-title">파일</div>
+        <dl class="kv">
+            <dt>이름</dt><dd>${escapeHtml(maskFilename(file.name))}</dd>
+            <dt>크기</dt><dd>${(file.size / 1024).toFixed(1)} KB</dd>
+            <dt>저장 형식</dt><dd>${escapeHtml(encodingLabel)}</dd>
+            <dt>줄바꿈</dt><dd>${crlf ? 'CRLF ' + crlf + ' ' : ''}${lfOnly ? 'LF ' + lfOnly + ' ' : ''}${crOnly ? 'CR ' + crOnly : ''}</dd>
+            <dt>전체 줄 수</dt><dd>${lineKinds.length}</dd>
+        </dl>`;
+
+    if (zipInfo) {
+        html += `<div class="sec-title">zip 안</div>
+        <dl class="kv">
+            <dt>대화 파일</dt><dd>${zipInfo.txts.length}개 — ${escapeHtml(zipInfo.txts.map(maskFilename).join(', '))}</dd>
+            <dt>전체 항목</dt><dd>${zipInfo.all.length}개</dd>
+        </dl>`;
+        if (zipInfo.txts.length > 1) {
+            html += `<div class="flag ok">여러 개로 나뉜 대화 파일 ${zipInfo.txts.length}개를 순서대로 이어 붙였습니다.</div>`;
+        }
+    }
+
+    html += `<div class="sec-title">줄별 판정</div>
+        <dl class="kv">
+            <dt>대화로 읽음</dt><dd>${counts.msg}줄${fmts.size ? ' (' + [...fmts].join(', ') + ' 형식)' : ''}</dd>
+            <dt>이어지는 내용</dt><dd>${counts.cont}줄</dd>
+            <dt>안내·날짜 줄</dt><dd>${counts.system + counts.divider}줄</dd>
+            <dt>못 읽은 줄</dt><dd>${counts.orphan}줄</dd>
+            <dt>최종 추출</dt><dd>${rows.length}건</dd>
+        </dl>`;
+
+    // 특수문자
+    if (suspects.length) {
+        html += `<div class="sec-title">섞여 있는 특수문자</div>`;
+        suspects.forEach(s => {
+            const hex = 'U+' + s.cp.toString(16).toUpperCase().padStart(4, '0');
+            const cls = (s.cp === 0xFFFD) ? 'bad' : 'warn';
+            html += `<div class="flag ${cls}">${escapeHtml(s.name)} <span style="font-family:var(--mono)">${hex}</span> — ${s.count}개</div>`;
+        });
+        html += `<p class="note">눈에는 보이지 않지만 글자 사이에 끼어 있는 문자입니다. 이게 시각·날짜 부분에 들어가면 대화를 못 읽습니다.</p>`;
+    } else {
+        html += `<div class="sec-title">섞여 있는 특수문자</div><div class="flag ok">없습니다.</div>`;
+    }
+
+    if (utf16LE || utf16BE) {
+        html += `<div class="flag ok">저장 형식이 UTF-16입니다. 내용은 멀쩡하고 읽는 데 문제도 없습니다.</div>`;
+    }
+    if (ampmIos > 0 && ampmEng === 0) {
+        html += `<div class="flag ok">시각이 12시간제(오전/오후)로 적혀 있습니다 — ${ampmIos}줄. 정상적으로 읽을 수 있는 형식입니다.</div>`;
+    } else if (ampmEng > 0) {
+        html += `<div class="flag warn">시각이 AM/PM으로 적혀 있습니다 — ${ampmEng}줄. 아직 지원하지 않는 표기입니다.</div>`;
+    }
+    if (foreignish > 0 && ampmIos === 0) {
+        html += `<div class="flag warn">날짜·시각 표기가 우리가 아는 형식과 다른 줄이 ${foreignish}줄 있습니다. 휴대폰 언어·지역 설정이 한국어가 아닐 수 있습니다.</div>`;
+    }
+    if (colonNames.length) {
+        html += `<div class="flag warn">이름에 콜론이 들어간 대화 상대가 있습니다: ${escapeHtml(colonNames.join(', '))}</div>`;
+    }
+    if (colonSuspectLines.length) {
+        html += `<div class="flag warn">이름에 콜론(:)이 들어간 상대가 있는 것 같습니다. 이러면 이름이 잘려서 들어갑니다.<br>
+        예: <span style="font-family:var(--mono);font-size:11.5px">${escapeHtml(maskLine(colonSuspectLines[0].line).slice(0, 70))}</span></div>`;
+    }
+
+    // 첫 실패 줄 X-ray
+    if (firstOrphan) {
+        html += `<div class="sec-title">첫 번째로 못 읽은 줄 (${firstOrphan.i + 1}번째 줄)</div>
+        <div class="xray">
+            <div class="xray-line">${escapeHtml(maskLine(firstOrphan.line).slice(0, 120))}</div>
+            ${xrayLine(firstOrphan.line)}
+        </div>
+        <p class="note">글자 하나하나의 번호입니다. 마침표는 002E, 콜론은 003A, 쉼표는 002C, 숫자는 0030~0039여야 정상입니다. 빨간 칸이 있으면 그게 원인입니다.<br>대화 내용은 ●로 가려져 있으니 이 화면은 그대로 캡처해 보내도 됩니다.</p>`;
+    } else if (rows.length === 0 && lineKinds.length) {
+        const firstReal = lineKinds.find(k => k.kind !== 'blank');
+        if (firstReal) {
+            html += `<div class="sec-title">첫 줄 살펴보기 (${firstReal.i + 1}번째 줄)</div>
+            <div class="xray">
+                <div class="xray-line">${escapeHtml(maskLine(firstReal.line).slice(0, 120))}</div>
+                ${xrayLine(firstReal.line)}
+            </div>`;
+        }
+    }
+
+    html += `<div class="row">
+        <button class="btn primary" id="saveReport">검사 결과 저장 (이미지)</button>
+        <button class="btn" id="copyReport">글자로 복사</button>
+    </div>`;
+    html += `</div>`;
+
+    // 미리보기 (기본은 내용을 가림 — 캡처해서 보내도 안전하게)
+    if (rows.length) {
+        html += `<div class="card">
+            <div class="sec-title" style="margin-top:0">읽어 온 대화 (앞 20건)</div>
+            <div class="row" style="margin-top:0;margin-bottom:10px">
+                <button class="btn" id="revealBtn">내용 보기</button>
+                <span style="font-size:12.5px;color:var(--text2)">캡처해서 보낼 때는 가린 상태로 두세요.</span>
+            </div>
+            <div class="tbl-wrap" id="previewTable"></div>
+        </div>`;
+    }
+
+    report.innerHTML = html;
+
+    // 미리보기 표 렌더 + 가리기 토글
+    if (rows.length) {
+        let revealed = false;
+        const tableBox = document.getElementById('previewTable');
+        const revealBtn = document.getElementById('revealBtn');
+        const drawTable = () => {
+            tableBox.innerHTML = `<table><thead><tr><th>이름</th><th>시각</th><th>내용</th></tr></thead><tbody>
+            ${rows.slice(0, 20).map(r => {
+                const nm = revealed ? r.name : maskLine(r.name);
+                const ct = revealed ? r.content.slice(0, 200) : maskLine(r.content.slice(0, 200));
+                return `<tr><td>${escapeHtml(nm)}</td><td style="font-family:var(--mono);font-size:11.5px">${escapeHtml(r.time)}</td><td class="c">${escapeHtml(ct)}</td></tr>`;
+            }).join('')}
+            </tbody></table>`;
+        };
+        drawTable();
+        revealBtn.addEventListener('click', () => {
+            revealed = !revealed;
+            revealBtn.textContent = revealed ? '내용 가리기' : '내용 보기';
+            drawTable();
+        });
+    }
+
+    // 결과 텍스트 복사 (스크린샷 대신 붙여넣어 보낼 수 있게)
+    const btn = document.getElementById('copyReport');
+    {
+        const lines = [
+            `[타래 검사기 결과 · 카카오톡]`,
+            `판정: ${verdict}`,
+            `안내: ${detail}`,
+            `파일: ${maskFilename(file.name)} / ${(file.size / 1024).toFixed(1)}KB / ${encodingLabel}`,
+            zipInfo ? `zip 내 대화 파일: ${zipInfo.txts.length}개 (${zipInfo.txts.map(maskFilename).join(', ')})` : null,
+            `전체 ${lineKinds.length}줄 — 대화 ${counts.msg}, 이어짐 ${counts.cont}, 안내 ${counts.system + counts.divider}, 못 읽음 ${counts.orphan}`,
+            `최종 추출: ${rows.length}건`,
+            `줄바꿈: ${crlf ? 'CRLF ' + crlf + ' ' : ''}${lfOnly ? 'LF ' + lfOnly + ' ' : ''}${crOnly ? 'CR ' + crOnly : ''}`.trim(),
+            `깨진 문자: ${broken ? broken + '개' : '없음'}`,
+            suspects.length ? `특수문자: ${suspects.map(s => `${s.name}(U+${s.cp.toString(16).toUpperCase().padStart(4, '0')})x${s.count}`).join(', ')}` : `특수문자: 없음`,
+            `12시간제: ${ampmIos ? (ampmEng > 0 ? 'AM/PM ' : '오전/오후 ') + ampmIos + '줄' : '없음'}`,
+            `형식 불일치: ${(foreignish && ampmIos === 0) ? foreignish + '줄 (다른 언어·지역 의심)' : '없음'}`,
+            `이름 콜론 의심: ${(colonNames.length || colonSuspectLines.length) ? '있음' : '없음'}`,
+            colonSuspectLines.length ? `  예: ${maskLine(colonSuspectLines[0].line).slice(0, 60)}` : null,
+            firstOrphan ? `첫 실패 줄(${firstOrphan.i + 1}): ${maskLine(firstOrphan.line).slice(0, 40)}` : null,
+            firstOrphan ? `  글자번호: ${[...maskLine(firstOrphan.line)].slice(0, 30).map(c => c === '●' ? '●' : 'U+' + c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')).join(' ')}` : null,
+        ].filter(Boolean);
+        wireReportButtons(lines, btn);
+    }
+}
+
+/* ============================================================
+   검사 결과 이미지로 저장 (외부 라이브러리 없이 캔버스에 직접 그림)
+   ============================================================ */
+// 복사 버튼 + 이미지 저장 버튼을 한 번에 연결한다.
+function wireReportButtons(lines, copyBtn) {
+    const text = lines.join('\n');
+    if (copyBtn) copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(text).then(() => {
+            copyBtn.textContent = '복사했습니다';
+            setTimeout(() => copyBtn.textContent = '글자로 복사', 1600);
+        });
+    });
+    const saveBtn = document.getElementById('saveReport');
+    if (saveBtn) saveBtn.addEventListener('click', () => {
+        saveReportImage(lines, '타래검사결과.png');
+        saveBtn.textContent = '저장했습니다';
+        setTimeout(() => saveBtn.textContent = '검사 결과 저장 (이미지)', 1600);
+    });
+}
+
+function saveReportImage(lines, filename) {
+    const pad = 24, lh = 26, fs = 15;
+    const cv = document.createElement('canvas');
+    const ctx = cv.getContext('2d');
+    const font = `${fs}px 'Malgun Gothic','Apple SD Gothic Neo',sans-serif`;
+    ctx.font = font;
+
+    // 긴 줄은 접어서 폭 안에 맞춘다
+    const maxW = 720;
+    const wrapped = [];
+    lines.forEach(t => {
+        let cur = '';
+        for (const ch of String(t)) {
+            if (ctx.measureText(cur + ch).width > maxW - pad * 2) { wrapped.push(cur); cur = '   ' + ch; }
+            else cur += ch;
+        }
+        wrapped.push(cur);
+    });
+
+    const ratio = window.devicePixelRatio || 1;
+    cv.width = maxW * ratio;
+    cv.height = (wrapped.length * lh + pad * 2) * ratio;
+    ctx.scale(ratio, ratio);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, maxW, cv.height / ratio);
+    ctx.font = font;
+    ctx.textBaseline = 'top';
+
+    wrapped.forEach((t, i) => {
+        ctx.fillStyle = i === 0 ? '#1a1916' : (/^판정:/.test(t) ? '#a4423a' : '#333029');
+        if (i === 0) ctx.font = `700 ${fs + 1}px 'Malgun Gothic','Apple SD Gothic Neo',sans-serif`;
+        else ctx.font = font;
+        ctx.fillText(t, pad, pad + i * lh);
+    });
+
+    cv.toBlob(blob => {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename || '검사결과.png';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    });
+}
+
+/* ============================================================
+   HTML 검사 (트위터 / 마스토돈) — 단계별 계수
+   ============================================================ */
+// 본체 추출기가 쓰는 셀렉터와 동일하게 맞춘다.
+const SEL = {
+    mastodon: {
+        label: '마스토돈',
+        container: '.status__wrapper, .detailed-status__wrapper',
+        name: '.display-name__html, .display-name strong',
+        text: '.status__content__text, .status__content',
+    },
+    twitter: {
+        label: '트위터(X)',
+        container: 'article[data-testid="tweet"]',
+        name: '[data-testid="User-Name"]',
+        text: '[data-testid="tweetText"]',
+    },
+    twitterCard: {
+        label: '트위터(아카이브 카드)',
+        container: '.tweet-card',
+        name: '.user-name',
+        text: '.tweet-body',
+    },
+};
+
+function countStages(doc, s) {
+    const els = doc.querySelectorAll(s.container);
+    let name = 0, time = 0, text = 0, rows = 0;
+    els.forEach(el => {
+        const n = el.querySelector(s.name);
+        const t = el.querySelector('time');
+        const c = el.querySelector(s.text);
+        const okN = !!(n && n.textContent.trim());
+        const okC = !!(c && c.textContent.trim());
+        if (okN) name++;
+        if (t) time++;
+        if (okC) text++;
+        if (okN && okC) rows++;      // 본체의 행 추가 조건과 동일
+    });
+    return { container: els.length, name, time, text, rows };
+}
+
+// 어떤 구조인지 모를 때, 대화 한 덩이처럼 보이는 클래스를 세어 힌트를 준다.
+function probeStructure(doc) {
+    const counts = new Map();
+    doc.querySelectorAll('[class]').forEach(el => {
+        for (let i = 0; i < el.classList.length; i++) {
+            const c = el.classList[i];
+            if (/status|toot|note|tweet|post|entry|message|timeline|item/i.test(c)) {
+                counts.set(c, (counts.get(c) || 0) + 1);
+            }
+        }
+    });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+}
+
+// 트위터처럼 클래스명이 난독화된 페이지는 data-testid 로 구조를 본다.
+function probeTestIds(doc) {
+    const counts = new Map();
+    doc.querySelectorAll('[data-testid]').forEach(el => {
+        const v = el.getAttribute('data-testid');
+        if (v) counts.set(v, (counts.get(v) || 0) + 1);
+    });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+}
+
+const FEDI_SOFTWARE = ['mastodon', 'misskey', 'pleroma', 'akkoma', 'gotosocial', 'firefish', 'sharkey', 'iceshrimp', 'friendica', 'pixelfed'];
+
+function diagnoseHtml(file, text) {
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+
+    // --- 저장 방식 ---
+    const savedFrom = /<!--\s*saved from url=/i.test(text);
+    const localRefs = (text.match(/_files\//g) || []).length;
+    const totalEls = doc.querySelectorAll('*').length;
+    const scriptEls = doc.querySelectorAll('script').length;
+    // 화면 내용이 함께 저장됐는지는 로컬 자원(_files/) 참조 유무로 갈린다.
+    // saved-from 주석은 브라우저·저장 방식에 따라 없을 수도 있어 보조 단서로만 쓴다.
+    const saveMode = localRefs > 0
+        ? '웹페이지, 전부'
+        : ('웹페이지, HTML만 — 화면 내용이 함께 저장되지 않음' + (savedFrom ? '' : ' (또는 원본 소스 파일)'));
+
+    // --- 서버·소프트웨어 ---
+    const canonical = doc.querySelector('link[rel="canonical"]');
+    let host = '';
+    if (canonical) { try { host = new URL(canonical.getAttribute('href')).hostname; } catch (e) { } }
+    const genEl = doc.querySelector('meta[name="generator"]');
+    const generator = genEl ? (genEl.getAttribute('content') || '') : '';
+    const softHits = FEDI_SOFTWARE.filter(k => new RegExp(k, 'i').test(text));
+    const hasInitialState = !!doc.querySelector('script#initial-state');
+
+    // --- 단계별 계수 ---
+    const st = {
+        mastodon: countStages(doc, SEL.mastodon),
+        twitter: countStages(doc, SEL.twitter),
+        twitterCard: countStages(doc, SEL.twitterCard),
+    };
+    // 어떤 플랫폼으로 읽히는지: 컨테이너가 가장 많이 잡힌 쪽
+    let best = 'mastodon';
+    ['twitter', 'twitterCard'].forEach(k => { if (st[k].container > st[best].container) best = k; });
+    const bestSel = SEL[best], bestSt = st[best];
+    const detected = bestSt.container > 0 ? bestSel.label
+        : (hasInitialState ? '마스토돈(추정)' : (doc.querySelectorAll('[data-testid]').length > 20 ? '트위터(추정)' : '알 수 없음'));
+
+    const struct = probeStructure(doc);
+    const testIdStruct = probeTestIds(doc);
+
+    // --- 판정 ---
+    let verdict, vclass, detail;
+    if (totalEls < 5) {
+        verdict = 'HTML 파일이 아닌 것 같습니다'; vclass = 'bad';
+        detail = '브라우저에서 [다른 이름으로 저장 → 웹페이지, 전부]로 저장한 파일을 넣어 주세요.';
+    } else if (bestSt.rows > 0) {
+        verdict = `대화 ${bestSt.rows}건을 읽었습니다`; vclass = 'ok';
+        detail = '이 파일은 타래 뽑기에서도 읽히는 형식입니다. 그래도 추출이 안 된다면 아래 검사 결과를 저장해 보내 주세요.';
+    } else if (bestSt.container === 0 && localRefs === 0) {
+        verdict = '화면 내용이 저장되지 않았습니다'; vclass = 'bad';
+        detail = '[웹페이지, HTML만]으로 저장하면 글이 안 담깁니다. 저장할 때 형식을 [웹페이지, 전부]로 골라 주세요.';
+    } else if (bestSt.container === 0) {
+        verdict = '이 페이지에서 글을 찾지 못했습니다'; vclass = 'bad';
+        detail = detected === '알 수 없음'
+            ? '트위터·마스토돈 대화 화면이 아니거나, 우리가 아직 지원하지 않는 서버일 수 있습니다.'
+            : '글이 다 뜬 뒤에 저장했는지 확인해 주세요. 화면을 끝까지 내려 다 보이게 한 다음 저장해야 합니다.';
+    } else {
+        verdict = '글은 찾았는데 내용을 읽지 못했습니다'; vclass = 'bad';
+        detail = '서버나 화면 구조가 우리가 아는 것과 다릅니다. 아래 “페이지 구조”를 그대로 캡처해 보내 주세요.';
+    }
+
+    // --- 리포트 ---
+    let html = `<div class="card">
+        <div class="verdict ${vclass}">${escapeHtml(verdict)}<span class="detail">${escapeHtml(detail)}</span></div>
+
+        <div class="sec-title">파일</div>
+        <dl class="kv">
+            <dt>이름</dt><dd>${escapeHtml(maskFilename(file.name))}</dd>
+            <dt>크기</dt><dd>${(file.size / 1024).toFixed(1)} KB</dd>
+            <dt>저장 방식</dt><dd>${escapeHtml(saveMode)}</dd>
+            <dt>화면 요소</dt><dd>${totalEls}개 (스크립트 ${scriptEls}개)</dd>
+        </dl>
+
+        <div class="sec-title">어디 페이지인가</div>
+        <dl class="kv">
+            <dt>판별</dt><dd>${escapeHtml(detected)}</dd>
+            ${host ? `<dt>서버 주소</dt><dd>${escapeHtml(host)}</dd>` : ''}
+            ${generator ? `<dt>생성기</dt><dd>${escapeHtml(generator)}</dd>` : ''}
+            ${softHits.length ? `<dt>발견된 이름</dt><dd>${escapeHtml(softHits.join(', '))}</dd>` : ''}
+        </dl>`;
+
+    if (softHits.length && softHits.indexOf('mastodon') === -1) {
+        html += `<div class="flag warn">이 서버는 마스토돈이 아니라 ${escapeHtml(softHits.join('/'))} 계열로 보입니다. 화면 구조가 달라서 지금은 읽지 못합니다.</div>`;
+    }
+
+    html += `<div class="sec-title">단계별로 몇 개나 살아남았나</div>
+        <dl class="kv">
+            <dt>글 덩이 찾기</dt><dd>${bestSt.container}개 <span style="color:var(--text3)">(${escapeHtml(bestSel.container)})</span></dd>
+            <dt>이름 읽기</dt><dd>${bestSt.name}개</dd>
+            <dt>시각 읽기</dt><dd>${bestSt.time}개</dd>
+            <dt>본문 읽기</dt><dd>${bestSt.text}개</dd>
+            <dt>최종 추출</dt><dd>${bestSt.rows}건</dd>
+        </dl>
+        <p class="note">위에서부터 순서대로 걸러집니다. 어느 줄에서 0이 되는지가 곧 원인입니다.</p>`;
+
+    // 다른 플랫폼도 참고로
+    const others = Object.keys(st).filter(k => k !== best && st[k].container > 0);
+    if (others.length) {
+        html += `<div class="flag ok">다른 형식으로도 잡힙니다: ${others.map(k => `${SEL[k].label} ${st[k].container}개`).join(', ')}</div>`;
+    }
+
+    if (struct.length) {
+        html += `<div class="sec-title">페이지 구조 (글처럼 보이는 덩어리)</div>
+        <div class="xray"><div class="chips">
+        ${struct.map(([c, n]) => `<span class="chip" style="min-width:auto;padding:4px 7px"><b>${escapeHtml(c)}</b>${n}개</span>`).join('')}
+        </div></div>
+        <p class="note">우리가 찾는 이름과 다른 게 잔뜩 있다면, 그 서버는 화면 구조가 다른 것입니다. 대화 내용은 들어 있지 않으니 그대로 캡처해 보내도 됩니다.</p>`;
+    }
+
+    if (testIdStruct.length) {
+        html += `<div class="sec-title">페이지 구조 (표시 이름표)</div>
+        <div class="xray"><div class="chips">
+        ${testIdStruct.map(([c, n]) => `<span class="chip" style="min-width:auto;padding:4px 7px"><b>${escapeHtml(c)}</b>${n}개</span>`).join('')}
+        </div></div>`;
+    }
+
+    html += `<div class="row">
+        <button class="btn primary" id="saveReport">검사 결과 저장 (이미지)</button>
+        <button class="btn" id="copyReport">글자로 복사</button>
+    </div></div>`;
+
+    // 미리보기 (가림 기본)
+    const rows = [];
+    if (bestSt.rows > 0) {
+        doc.querySelectorAll(bestSel.container).forEach(el => {
+            const n = el.querySelector(bestSel.name), c = el.querySelector(bestSel.text), t = el.querySelector('time');
+            if (n && n.textContent.trim() && c && c.textContent.trim()) {
+                rows.push({ name: n.textContent.trim(), time: t ? (t.getAttribute('datetime') || t.textContent.trim()) : '', content: c.textContent.trim() });
+            }
+        });
+        html += `<div class="card">
+            <div class="sec-title" style="margin-top:0">읽어 온 대화 (앞 20건)</div>
+            <div class="row" style="margin-top:0;margin-bottom:10px">
+                <button class="btn" id="revealBtn">내용 보기</button>
+                <span style="font-size:12.5px;color:var(--text2)">캡처해서 보낼 때는 가린 상태로 두세요.</span>
+            </div>
+            <div class="tbl-wrap" id="previewTable"></div>
+        </div>`;
+    }
+
+    report.innerHTML = html;
+
+    if (rows.length) {
+        let revealed = false;
+        const box = document.getElementById('previewTable'), btn2 = document.getElementById('revealBtn');
+        const draw = () => {
+            box.innerHTML = `<table><thead><tr><th>이름</th><th>시각</th><th>내용</th></tr></thead><tbody>
+            ${rows.slice(0, 20).map(r => {
+                const nm = revealed ? r.name : maskLine(r.name, 0);
+                const ct = revealed ? r.content.slice(0, 200) : maskLine(r.content.slice(0, 200), 0);
+                return `<tr><td>${escapeHtml(nm)}</td><td style="font-family:var(--mono);font-size:11.5px">${escapeHtml(r.time)}</td><td class="c">${escapeHtml(ct)}</td></tr>`;
+            }).join('')}</tbody></table>`;
+        };
+        draw();
+        btn2.addEventListener('click', () => { revealed = !revealed; btn2.textContent = revealed ? '내용 가리기' : '내용 보기'; draw(); });
+    }
+
+    const btn = document.getElementById('copyReport');
+    {
+        const lines = [
+            `[타래 검사기 결과 · HTML]`,
+            `판정: ${verdict}`,
+            `안내: ${detail}`,
+            `파일: ${maskFilename(file.name)} / ${(file.size / 1024).toFixed(1)}KB`,
+            `저장 방식: ${saveMode}`,
+            `판별: ${detected}${softHits.length ? ' / 발견된 이름: ' + softHits.join(', ') : ''}${generator ? ' / 생성기: ' + generator : ''}`,
+            `요소 ${totalEls}개, 스크립트 ${scriptEls}개`,
+            others.length ? `다른 형식으로도 잡힘: ${others.map(k => SEL[k].label + ' ' + st[k].container + '개').join(', ')}` : null,
+            `단계: 글덩이 ${bestSt.container} → 이름 ${bestSt.name} / 시각 ${bestSt.time} / 본문 ${bestSt.text} → 행 ${bestSt.rows}`,
+            struct.length ? `구조: ${struct.map(([c, n]) => c + '(' + n + ')').join(', ')}` : null,
+            testIdStruct.length ? `구조(이름표): ${testIdStruct.map(([c, n]) => c + '(' + n + ')').join(', ')}` : null,
+        ].filter(Boolean);
+        wireReportButtons(lines, btn);
+    }
+}
+
+</script>
+</body>
+</html>
