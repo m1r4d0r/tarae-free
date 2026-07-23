@@ -4,6 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>타래 저장소</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%A7%B5</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<!-- 검색·공유용 정보. OAuth 동의 화면의 앱 이름과 같은 표기를 사용합니다. -->
+<meta name="description" content="타래 저장소는 트위터(X)·마스토돈·디스코드·카카오톡에서 나눈 대화를 타래(CSV)로 추출해 저장하고, 다시 웹 문서나 이미지로 엮어 보관하는 웹 도구입니다. 모든 처리는 이용자의 브라우저 안에서만 이루어집니다.">
+<meta name="application-name" content="타래 저장소">
+<link rel="canonical" href="https://tarae-archiving.net/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="타래 저장소">
+<meta property="og:title" content="타래 저장소">
+<meta property="og:description" content="대화를 타래(CSV)로 추출해 저장하고, 다시 웹 문서나 이미지로 엮어 보관하는 웹 도구입니다. 모든 처리는 브라우저 안에서만 이루어집니다.">
+<meta property="og:url" content="https://tarae-archiving.net/">
+<meta property="og:locale" content="ko_KR">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="타래 저장소">
+<meta name="twitter:description" content="대화를 타래(CSV)로 추출해 저장하고, 다시 웹 문서나 이미지로 엮어 보관하는 웹 도구입니다.">
+
 <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -170,7 +190,7 @@
 
     <div class="lead-card">
         <b>트위터(X), 마스토돈, 디스코드, 카카오톡</b>에서 나눈 다채롭고 소중한 이야기를 언제든 다시 펼쳐볼 수 있도록 <b>타래(CSV)</b>로 뽑아 저장하고, 필요할 때 다시 열어 <b>HTML이나 캡쳐 이미지</b>로 엮어주기 위한 사이트 <b>타래 저장소</b>입니다.<br>
-        올린 내용은 서버로 <b>전혀 전송되지 않으며</b>, 모든 가공과 처리는 <b>이 브라우저 안에서만</b> 이루어집니다. 추후 좀 더 편리한 가공을 위한 유료 툴킷을 배포할 예정이 있지만 기본적인 타래 뽑기와 타래 엮기 사이트는 <b>무료 배포</b>로 유지됩니다.
+        올린 내용은 서버로 <b>전혀 전송되지 않으며</b>, 모든 가공과 처리는 <b>이 브라우저 안에서만</b> 이루어집니다.
     </div>
 
     <div class="tools-row">
@@ -196,12 +216,16 @@
         <div class="update-notes-title">📌 업데이트 노트 및 향후 계획</div>
         <ul class="update-list">
             <li>
-                <span class="update-date">2026.07.16</span>
-                <span class="update-desc">iOS에서 받은 카카오톡 텍스트 미대응 수정, 트위터 타래 백업기 호환 보완</span>
+                <span class="update-date">2026.07.20</span>
+                <span class="update-desc">타래 툴킷 오픈 예정 (커스텀 타래 엮기, 트위터 아카이브 뽑기, 타래 디바이더/바인더)</span>
             </li>
             <li>
-                <span class="update-date">2026.07.15</span>
-                <span class="update-desc">타래 툴킷 오픈 준비 중 (커스텀 타래 엮기, 롤 20 타래 엮기, 타래 디바이더/바인더 등)</span>
+                <span class="update-date">2026.07.19</span>
+                <span class="update-desc">iOS 카카오톡 텍스트 zip 업로드 지원, 12시간제 지원, 오류 진단을 위한 타래 검사기 추가</span>
+            </li>
+            <li>
+                <span class="update-date">2026.07.16</span>
+                <span class="update-desc">iOS에서 받은 카카오톡 텍스트 미대응 수정, 트위터 타래 백업기 호환 보완</span>
             </li>
             <li>
                 <span class="update-date">2026.07.15</span>
